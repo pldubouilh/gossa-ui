@@ -49,12 +49,12 @@ function browseTo (href, flickerDone, skipHistory) {
     const title = parsed.head.querySelector('title').innerText
     // check if is current path - if so skip following
     if (pageTitle.innerText !== title) {
+      if (!skipHistory) {
+        history.pushState({}, '', encodeURI(window.extraPath + title))
+      }
+
       pageTitle.innerText = title
       pageH1.innerText = '.' + title
-
-      if (!skipHistory) {
-        history.pushState({}, '', encodeURI(title))
-      }
     }
 
     if (flickerDone) {
@@ -97,7 +97,8 @@ const refresh = () => browseTo(location.href, true)
 
 const softPrev = () => history.replaceState({}, '', decodeURI(location.href.split('/').slice(0, -1).join('/') + '/'))
 
-const prevPage = (url, skipHistory) => window.quitAll() || browseTo(url, false, skipHistory)
+const isAtExtraPath = url => location.origin + window.extraPath + "/../" === url
+const prevPage = (url, skipHistory) => window.quitAll() || isAtExtraPath(url) || browseTo(url, false, skipHistory)
 
 window.onpopstate = () => prevPage(location.href, true)
 
@@ -105,7 +106,7 @@ window.onpopstate = () => prevPage(location.href, true)
 function rpcFs (call, args, cb) {
   console.log('RPC', call, args)
   const xhr = new XMLHttpRequest()
-  xhr.open('POST', location.origin + '/rpc')
+  xhr.open('POST', location.origin + window.extraPath + '/rpc')
   xhr.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
   xhr.send(JSON.stringify({ call, args }))
   xhr.onload = cb
@@ -162,7 +163,7 @@ function postFile (file, path) {
   formData.append(file.name, file)
 
   const xhr = new XMLHttpRequest()
-  xhr.open('POST', location.origin + '/post')
+  xhr.open('POST', location.origin + window.extraPath + '/post')
   xhr.setRequestHeader('gossa-path', encodeURIComponent(path))
   xhr.upload.addEventListener('load', shouldRefresh)
   xhr.upload.addEventListener('progress', updatePercent)
