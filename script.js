@@ -372,12 +372,12 @@ const storeLastArrowSrc = src => localStorage.setItem('last-selected' + location
 
 function scrollToArrow () {
   const el = getASelected()
-  for (let k = 0; k < 30; k++) {
+  while (1) {
     const itemPos = el.getBoundingClientRect()
     if (itemPos.top < 0) {
-      scrollBy(0, -200)
+      scrollBy(0, -300)
     } else if (itemPos.bottom > window.innerHeight) {
-      scrollBy(0, 200)
+      scrollBy(0, 300)
     } else {
       break
     }
