@@ -10,7 +10,10 @@
     <title>{{.Title}}</title>
     <link href="data:image/png;base64,favicon_will_be_here" rel="icon" type="image/png" />
     <style type="text/css">css_will_be_here</style>
-    <script>window.onload = function () { js_will_be_here }</script>
+    <script>
+        window.extraPath = {{.ExtraPath}}.slice(0, -1)
+        window.onload = function () { js_will_be_here }
+    </script>
 </head>
 
 <body>
