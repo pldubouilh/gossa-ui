@@ -97,12 +97,23 @@ const refresh = () => browseTo(location.href, true)
 
 const softPrev = () => history.replaceState({}, '', decodeURI(location.href.split('/').slice(0, -1).join('/') + '/'))
 
-const isAtExtraPath = url => location.origin + window.extraPath + "/../" === url
+const isAtExtraPath = url => location.origin + window.extraPath + '/../' === url
 const prevPage = (url, skipHistory) => window.quitAll() || isAtExtraPath(url) || browseTo(url, false, skipHistory)
 
 window.onpopstate = () => prevPage(location.href, true)
 
 // RPC
+function rpcPost (id, what, path, cbDone, cbErr, cbUpdate) {
+  const xhr = new XMLHttpRequest()
+  xhr.open('POST', location.origin + window.extraPath + '/post')
+  xhr.setRequestHeader('gossa-path', path)
+  xhr.upload.addEventListener('load', cbDone)
+  xhr.upload.addEventListener('progress', cbUpdate)
+  xhr.upload.addEventListener('error', cbErr)
+  xhr.upload.id = id
+  xhr.send(what)
+}
+
 function rpcFs (call, args, cb) {
   console.log('RPC', call, args)
   const xhr = new XMLHttpRequest()
@@ -161,14 +172,7 @@ function postFile (file, path) {
 
   const formData = new FormData()
   formData.append(file.name, file)
-
-  const xhr = new XMLHttpRequest()
-  xhr.open('POST', location.origin + window.extraPath + '/post')
-  xhr.setRequestHeader('gossa-path', encodeURIComponent(path))
-  xhr.upload.addEventListener('load', shouldRefresh)
-  xhr.upload.addEventListener('progress', updatePercent)
-  xhr.upload.id = totalUploads
-  xhr.send(formData)
+  rpcPost(totalUploads, formData, encodeURIComponent(path), shouldRefresh, null, updatePercent)
 }
 
 const parseDomFolder = f => f.createReader().readEntries(e => e.forEach(i => parseDomItem(i)))
@@ -262,41 +266,32 @@ document.ondrop = e => {
 }
 
 // Notepad
-function saveText (cbok, cberr) {
-  const formData = new FormData()
-  formData.append(fileEdited, editor.innerText)
-  fetch(location.origin + '/post', {
-    method: 'POST',
-    credentials: 'include',
-    body: formData,
-    headers: new Headers({ 'gossa-path': encodeURIComponent(decodeURI(location.pathname)) })
-  }).then(() => {
-    toast.style.display = 'none'
-    cbok && cbok()
-  }).catch(() => {
-    toast.style.display = 'block'
-    cberr && cberr()
-  })
-}
-
 const isEditorMode = () => editor.style.display === 'block'
 const textTypes = ['.txt', '.rtf', '.md', '.log']
 const isTextFile = src => src && textTypes.find(type => src.toLocaleLowerCase().includes(type))
 let fileEdited
 
-function padOff () {
-  if (!isEditorMode()) { return }
-
-  saveText(() => {
+function saveText (quitting) {
+  const formData = new FormData()
+  formData.append(fileEdited, editor.innerText)
+  rpcPost(0, formData, encodeURIComponent(decodeURI(location.pathname)), () => {
+    toast.style.display = 'none'
+    if (!quitting) return
     clearInterval(window.padTimer)
     window.onbeforeunload = null
     resetView()
     softPrev()
     refresh()
   }, () => {
+    toast.style.display = 'block'
+    if (!quitting) return
     alert('cant save!\r\nleave window open to resume saving\r\nwhen connection back up')
   })
+}
 
+function padOff () {
+  if (!isEditorMode()) { return }
+  saveText(true)
   return true
 }
 
@@ -306,10 +301,7 @@ async function displayPad (a) {
       fileEdited = a.innerHTML
       const f = await fetch(a.href, {
         credentials: 'include',
-        headers: new Headers({
-          'pragma': 'no-cache',
-          'cache-control': 'no-cache'
-        })
+        headers: new Headers({ 'pragma': 'no-cache', 'cache-control': 'no-cache' })
       })
       editor.innerText = await f.text()
     } catch (error) {
@@ -379,9 +371,16 @@ window.rename = (e, commit) => {
 const storeLastArrowSrc = src => localStorage.setItem('last-selected' + location.href, src)
 
 function scrollToArrow () {
-  const pos = getArrowSelected().getBoundingClientRect()
-  if (pos.top < 0 || pos.bottom > window.innerHeight) {
-    setTimeout(scrollTo, 50, 0, pos.y)
+  const el = getASelected()
+  for (let k = 0; k < 30; k++) {
+    const itemPos = el.getBoundingClientRect()
+    if (itemPos.top < 0) {
+      scrollBy(0, -200)
+    } else if (itemPos.bottom > window.innerHeight) {
+      scrollBy(0, 200)
+    } else {
+      break
+    }
   }
 }
 
@@ -423,18 +422,7 @@ function moveArrow (down) {
 
   all[i].classList.add('arrow-selected')
   storeLastArrowSrc(getASelected().href)
-
-  const itemPos = all[i].getBoundingClientRect()
-
-  if (i === 0) {
-    scrollTo(0, 0)
-  } else if (i === all.length - 1) {
-    scrollTo(0, document.documentElement.scrollHeight)
-  } else if (itemPos.top < 0) {
-    scrollBy(0, -200)
-  } else if (itemPos.bottom > window.innerHeight) {
-    scrollBy(0, 200)
-  }
+  scrollToArrow()
 }
 
 // Pictures carousel
