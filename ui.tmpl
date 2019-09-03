@@ -24,6 +24,7 @@
 
     <h1>.{{.Title}}</h1>
 
+
     <div id="icHolder">
         <div style="display:none;" onclick="document.getElementById('clickupload').click()" class="ic icon-large-upload manualUp"></div>
         <div onclick="window.displayPad()" class="ic icon-large-pad"></div>
@@ -35,7 +36,7 @@
     <table>
     {{range .RowsFolders}}
         <tr>
-            <td class="iconRow"><i ondblclick="return rm(event)" onclick="return rename(event)" class="btn icon icon-{{.Ext}} icon-blank"></i></td>
+            <td class="iconRow"><i ondblclick="return rm(event)" onclick="return rename(event)" class="btn icon icon-{{.Ext}}"></i></td>
             <td class="file-size"><code>{{.Size}}</code></td>
             <td class="arrow"><div class="arrow-icon"></div></td>
             <td class="display-name"><a class="list-links" onclick="return onClickLink(event)" href="{{.Href}}">{{.Name}}</a></td>
@@ -43,7 +44,9 @@
     {{end}}
     {{range .RowsFiles}}
         <tr>
-            <td class="iconRow"><i ondblclick="return rm(event)" onclick="return rename(event)" class="btn icon icon-{{.Ext}} icon-blank"></i></td>
+            <td class="iconRow"><i ondblclick="return rm(event)" onclick="return rename(event)" class="btn icon">
+                <div class="fi fi-size-xs fi-{{.Ext}}"><div class="fi-content"></div></div>
+            </i></td>
             <td class="file-size"><code>{{.Size}}</code></td>
             <td class="arrow"><div class="arrow-icon"></div></td>
             <td class="display-name"><a class="list-links" onclick="return onClickLink(event)" href="{{.Href}}">{{.Name}}</a></td>
