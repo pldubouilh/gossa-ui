@@ -25,6 +25,7 @@ const editor = document.getElementById('text-editor')
 const crossIcon = document.getElementById('quitAll')
 const toast = document.getElementById('toast')
 const table = document.querySelector('table')
+const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
 // helpers
 let allA
@@ -42,6 +43,8 @@ manualUpload.addEventListener('change', () => Array.from(manualUpload.files).for
 
 // Soft nav
 function browseTo (href, flickerDone, skipHistory) {
+  storeLastArrowPos(true)
+
   fetch(href, { credentials: 'include' }).then(r => r.text().then(t => {
     const parsed = new DOMParser().parseFromString(t, 'text/html')
     table.innerHTML = parsed.querySelector('table').innerHTML
@@ -52,7 +55,6 @@ function browseTo (href, flickerDone, skipHistory) {
       if (!skipHistory) {
         history.pushState({}, '', encodeURI(window.extraPath + title))
       }
-
       pageTitle.innerText = title
       pageH1.innerText = '.' + title
     }
@@ -66,15 +68,13 @@ function browseTo (href, flickerDone, skipHistory) {
 }
 
 window.onClickLink = e => {
-  storeLastArrowSrc(e.target.href)
-
   // follow dirs
   if (isFolder(e.target)) {
     browseTo(e.target.href)
     return false
   // enable notepad if relevant
   } else if (isTextFile(e.target.innerText) && !isEditorMode()) {
-    displayPad(e.target)
+    padOn(e.target)
     return false
   // toggle picture carousel
   } else if (isPic(e.target.href) && !isPicMode()) {
@@ -103,7 +103,7 @@ const prevPage = (url, skipHistory) => window.quitAll() || isAtExtraPath(url) ||
 window.onpopstate = () => prevPage(location.href, true)
 
 // RPC
-function rpcPost (id, what, path, cbDone, cbErr, cbUpdate) {
+function upload (id, what, path, cbDone, cbErr, cbUpdate) {
   const xhr = new XMLHttpRequest()
   xhr.open('POST', location.origin + window.extraPath + '/post')
   xhr.setRequestHeader('gossa-path', path)
@@ -114,7 +114,7 @@ function rpcPost (id, what, path, cbDone, cbErr, cbUpdate) {
   xhr.send(what)
 }
 
-function rpcFs (call, args, cb) {
+function rpc (call, args, cb) {
   console.log('RPC', call, args)
   const xhr = new XMLHttpRequest()
   xhr.open('POST', location.origin + window.extraPath + '/rpc')
@@ -124,9 +124,21 @@ function rpcFs (call, args, cb) {
   xhr.onerror = () => flicker(sadBadge)
 }
 
-const mkdirCall = (path, cb) => rpcFs('mkdirp', [prependPath(path)], cb)
-const rmCall = (path1, cb) => rpcFs('rm', [prependPath(path1)], cb)
-const mvCall = (path1, path2, cb) => rpcFs('mv', [path1, path2], cb)
+window.onunload = historyCall
+
+function historyCall() {
+  if (!storeArrowToken) return
+  clearTimeout(storeArrowToken)
+  storeArrowToken = 0
+  const pos = getASelected().innerText
+  const path = currentActualPath.length > 0 ? currentActualPath : decodeURIComponent(location.pathname)
+  console.log('RPC', 'historySet', [path, pos])
+  navigator.sendBeacon(location.origin + window.extraPath + '/rpc', JSON.stringify({ call: 'historySet', args: [path, pos] }))
+}
+
+const mkdirCall = (path, cb) => rpc('mkdirp', [prependPath(path)], cb)
+const rmCall = (path1, cb) => rpc('rm', [prependPath(path1)], cb)
+const mvCall = (path1, path2, cb) => rpc('mv', [path1, path2], cb)
 
 // File upload
 let totalDone = 0
@@ -172,7 +184,7 @@ function postFile (file, path) {
 
   const formData = new FormData()
   formData.append(file.name, file)
-  rpcPost(totalUploads, formData, encodeURIComponent(path), shouldRefresh, null, updatePercent)
+  upload(totalUploads, formData, encodeURIComponent(path), shouldRefresh, null, updatePercent)
 }
 
 const parseDomFolder = f => f.createReader().readEntries(e => e.forEach(i => parseDomItem(i)))
@@ -274,7 +286,7 @@ let fileEdited
 function saveText (quitting) {
   const formData = new FormData()
   formData.append(fileEdited, editor.innerText)
-  rpcPost(0, formData, encodeURIComponent(decodeURI(location.pathname)), () => {
+  upload(0, formData, encodeURIComponent(decodeURI(location.pathname)), () => {
     toast.style.display = 'none'
     if (!quitting) return
     clearInterval(window.padTimer)
@@ -295,7 +307,7 @@ function padOff () {
   return true
 }
 
-async function displayPad (a) {
+async function padOn (a) {
   if (a) {
     try {
       fileEdited = a.innerHTML
@@ -312,8 +324,8 @@ async function displayPad (a) {
     if (!fileEdited) { return }
     fileEdited = isTextFile(fileEdited) ? fileEdited : fileEdited + '.txt'
     editor.innerText = ''
-    saveText()
-    storeLastArrowSrc(location.href + fileEdited)
+    setCursorTo(fileEdited)
+    storeLastArrowPos()
   }
 
   console.log('editing file', fileEdited)
@@ -322,14 +334,17 @@ async function displayPad (a) {
   editor.focus()
   window.onbeforeunload = warningMsg
   window.padTimer = setInterval(saveText, 5000)
+  currentActualPath = decodeURIComponent(location.pathname)
   pushSoftState(fileEdited)
 }
 
-window.displayPad = displayPad
+window.displayPad = padOn
 
 // quit pictures or editor
 function resetView () {
+  currentActualPath = ""
   table.style.display = 'table'
+  picsHolder.src = transparentPixel
   editor.style.display = pics.style.display = crossIcon.style.display = 'none'
 }
 
@@ -344,12 +359,13 @@ window.mkdirBtn = function () {
 }
 
 // Icon click handler
-const getBtnA = e => e.target.parentElement.parentElement.querySelector('a')
+const getBtnA = e => e.target.closest("tr").querySelector('a')
 
 window.rm = e => {
   clearTimeout(window.clickToken)
-  const path = e.key ? getASelected().href : getBtnA(e).pathname
-  rmMsg() || rmCall(decode(path), refresh)
+  const target = e.key ? getASelected() : getBtnA(e)
+  if (target.innerText === '../') return
+  rmMsg() || rmCall(decode(target.href), refresh)
 }
 
 window.rename = (e, commit) => {
@@ -360,15 +376,25 @@ window.rename = (e, commit) => {
     return
   }
 
-  const orig = e.key ? getASelected().innerHTML : getBtnA(e).innerHTML
-  const chg = prompt('rename to', orig)
+  const target = e.key ? getASelected() : getBtnA(e)
+  if (target.innerText === "../") return
+  const chg = prompt('rename to', target.innerHTML)
   if (chg && !isDupe(chg)) {
-    mvCall(prependPath(orig), prependPath(chg), refresh)
+    mvCall(prependPath(target.innerHTML), prependPath(chg), refresh)
   }
 }
 
 // Keyboard Arrow
-const storeLastArrowSrc = src => localStorage.setItem('last-selected' + location.href, src)
+let storeArrowToken
+
+function storeLastArrowPos (flush) {
+  if (flush && storeArrowToken) {
+    historyCall()
+  } else {
+    clearTimeout(storeArrowToken)
+    storeArrowToken = setTimeout(historyCall, 1000)
+  }
+}
 
 function scrollToArrow () {
   const el = getASelected()
@@ -390,10 +416,9 @@ function clearArrowSelected () {
   arr.classList.remove('arrow-selected')
 }
 
-function restoreCursorPos () {
+function setCursorTo (where) {
   clearArrowSelected()
-  const hrefSelected = localStorage.getItem('last-selected' + location.href)
-  let a = allA.find(el => el.href === hrefSelected)
+  let a = allA.find(el => el.innerText === where || el.innerText === where+"/")
 
   if (!a) {
     if (allA[0].innerText === '../') {
@@ -421,7 +446,7 @@ function moveArrow (down) {
   }
 
   all[i].classList.add('arrow-selected')
-  storeLastArrowSrc(getASelected().href)
+  storeLastArrowPos()
   scrollToArrow()
 }
 
@@ -430,16 +455,19 @@ const picTypes = ['.jpg', '.jpeg', '.png', '.gif']
 const isPic = src => src && picTypes.find(type => src.toLocaleLowerCase().includes(type))
 const isPicMode = () => pics.style.display === 'flex'
 window.picsNav = () => picsNav(true)
+let currentActualPath = ""
 
 function setImage () {
   const src = allImgs[imgsIndex]
   picsHolder.src = src
-  storeLastArrowSrc(src)
-  restoreCursorPos()
-  history.replaceState({}, '', encodeURI(src.split('/').pop()))
+  name = src.split('/').pop()
+  setCursorTo(name)
+  storeLastArrowPos()
+  history.replaceState({}, '', encodeURI(name))
 }
 
 function picsOn (href) {
+  currentActualPath = decodeURIComponent(location.pathname)
   imgsIndex = allImgs.findIndex(el => el.includes(href))
   setImage()
   table.style.display = 'none'
@@ -503,8 +531,8 @@ function cpPath () {
 function setCursorToClosestTyped () {
   const a = allA.find(el => el.innerText.toLocaleLowerCase().startsWith(typedPath))
   if (!a) { return }
-  storeLastArrowSrc(a.href)
-  restoreCursorPos()
+  setCursorTo(a.innerText)
+  storeLastArrowPos()
 }
 
 document.body.addEventListener('keydown', e => {
@@ -554,6 +582,9 @@ document.body.addEventListener('keydown', e => {
       case 'KeyX':
         return prevent(e) || onCut()
 
+      case 'KeyR':
+        return prevent(e) || refresh()
+
       case 'KeyV':
         return prevent(e) || ensureMove() || onPaste()
 
@@ -583,9 +614,13 @@ document.body.addEventListener('keydown', e => {
 function init () {
   allA = Array.from(document.querySelectorAll('a.list-links'))
   allImgs = allA.map(el => el.href).filter(isPic)
-
   imgsIndex = softStatePushed = 0
-  restoreCursorPos()
+
+  if (!getArrowSelected()) {
+    table.querySelector(".arrow-icon").classList.add("arrow-selected")
+  }
+
+  scrollToArrow()
   console.log('Browsed to ' + location.href)
 
   if (cuts.length) {
