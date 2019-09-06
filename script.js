@@ -16,6 +16,8 @@ const barDiv = document.getElementById('progress')
 const upGrid = document.getElementById('drop-grid')
 const pics = document.getElementById('pics')
 const picsHolder = document.getElementById('picsHolder')
+const video = document.getElementById('video')
+const videoHolder = document.getElementById('videoHolder')
 const manualUpload = document.getElementById('clickupload')
 const okBadge = document.getElementById('ok')
 const sadBadge = document.getElementById('sad')
@@ -37,6 +39,14 @@ const getASelected = () => !getArrowSelected() ? false : getArrowSelected().pare
 const prependPath = a => a.startsWith('/') ? a : decodeURI(location.pathname) + a
 const prevent = e => e.preventDefault()
 const flicker = w => w.classList.remove('runFade') || void w.offsetWidth || w.classList.add('runFade')
+
+async function hash(message) {
+  const msgUint8 = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+}
 
 // Manual upload
 manualUpload.addEventListener('change', () => Array.from(manualUpload.files).forEach(f => isDupe(f.name) || postFile(f, '/' + f.name)), false)
@@ -79,6 +89,10 @@ window.onClickLink = e => {
   // toggle picture carousel
   } else if (isPic(e.target.href) && !isPicMode()) {
     picsOn(e.target.href)
+    return false
+    // toggle videos mode
+  } else if (isVideo(e.target.href) && !isVideoMode()) {
+    videoOn(e.target.href)
     return false
   }
 
@@ -124,18 +138,18 @@ function rpc (call, args, cb) {
   xhr.onerror = () => flicker(sadBadge)
 }
 
-window.onunload = historyCall
-
-function historyCall() {
-  if (!storeArrowToken) return
-  clearTimeout(storeArrowToken)
-  storeArrowToken = 0
-  const pos = getASelected().innerText
-  const path = currentActualPath.length > 0 ? currentActualPath : decodeURIComponent(location.pathname)
-  console.log('RPC', 'historySet', [path, pos])
-  navigator.sendBeacon(location.origin + window.extraPath + '/rpc', JSON.stringify({ call: 'historySet', args: [path, pos] }))
+window.onunload = () => {
+  setVideoTimeServer()
+  setPathServer()
 }
 
+function historyCallSet(args) {
+  const call = "historySet"
+  console.log('RPC', call, args)
+  navigator.sendBeacon(location.origin + window.extraPath + '/rpc', JSON.stringify({ call, args }))
+}
+
+const historyCallGet = (path, cb) => rpc('historyGet', [path], cb)
 const mkdirCall = (path, cb) => rpc('mkdirp', [prependPath(path)], cb)
 const rmCall = (path1, cb) => rpc('rm', [prependPath(path1)], cb)
 const mvCall = (path1, path2, cb) => rpc('mv', [path1, path2], cb)
@@ -345,10 +359,11 @@ function resetView () {
   currentActualPath = ""
   table.style.display = 'table'
   picsHolder.src = transparentPixel
-  editor.style.display = pics.style.display = crossIcon.style.display = 'none'
+  videoHolder.src = ""
+  editor.style.display = pics.style.display = video.style.display = crossIcon.style.display = 'none'
 }
 
-window.quitAll = () => picsOff() || padOff()
+window.quitAll = () => picsOff() || videosOff() || padOff()
 
 // Mkdir icon
 window.mkdirBtn = function () {
@@ -387,12 +402,23 @@ window.rename = (e, commit) => {
 // Keyboard Arrow
 let storeArrowToken
 
+
+
+async function setPathServer() {
+  if (!storeArrowToken) return
+  clearTimeout(storeArrowToken)
+  storeArrowToken = 0
+  const path = currentActualPath.length > 0 ? currentActualPath : decodeURIComponent(location.pathname)
+  const pos = await hash(getASelected().innerText)
+  historyCallSet([path, pos])
+}
+
 function storeLastArrowPos (flush) {
   if (flush && storeArrowToken) {
-    historyCall()
+    setPathServer()
   } else {
     clearTimeout(storeArrowToken)
-    storeArrowToken = setTimeout(historyCall, 1000)
+    storeArrowToken = setTimeout(setPathServer, 1000)
   }
 }
 
@@ -497,6 +523,68 @@ function picsNav (down) {
   return true
 }
 
+
+// Video player
+const videosTypes = ['.mp4', '.webm', '.ogv']
+const isVideo = src => src && videosTypes.find(type => src.toLocaleLowerCase().includes(type))
+const isVideoMode = () => video.style.display === 'flex'
+
+async function setVideoTimeServer () {
+  const time = parseInt(videoHolder.currentTime) + ""
+  const path = await hash(videoHolder.src)
+  historyCallSet([path, parseInt(time) + ""])
+}
+
+function videoFs () {
+  video.requestFullscreen()
+}
+
+
+function videoFf(future) {
+  videoHolder.currentTime += future ? 10 : -10
+}
+
+function videoSound(up) {
+  videoHolder.volume += up ? 0.1 : -0.1
+}
+
+async function videoOn (src) {
+  const name = src.split('/').pop()
+  setCursorTo(decodeURI(name))
+  storeLastArrowPos()
+  currentActualPath = decodeURIComponent(location.pathname)
+  table.style.display = 'none'
+  crossIcon.style.display = 'block'
+  video.style.display = 'flex'
+  videoHolder.pause()
+
+  // If there is a current one save it at the position
+  if (videoHolder.src !== "") {
+    setVideoTimeServer()
+  }
+
+  historyCallGet(await hash(src), e => {
+    if (e.target) videoHolder.currentTime = parseInt(e.target.responseText) || 0
+  })
+
+  videoHolder.src = src
+  videoHolder.oncanplay = () => {
+    videoHolder.play()
+    videoHolder.oncanplay = null
+  }
+  pushSoftState(decodeURI(name))
+  return true
+}
+
+function videosOff () {
+  if (!isVideoMode()) { return }
+  setVideoTimeServer()
+  resetView()
+  softPrev()
+  return true
+}
+
+
 // Paste handler
 let cuts = []
 function onPaste () {
@@ -537,7 +625,7 @@ function setCursorToClosestTyped () {
 
 document.body.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
-    return resetBackgroundLinks() || picsOff() || padOff()
+    return resetBackgroundLinks() || picsOff() || videosOff() || padOff()
   }
 
   if (isEditorMode()) { return }
@@ -553,6 +641,22 @@ document.body.addEventListener('keydown', e => {
       case 'ArrowRight':
       case 'ArrowDown':
         return prevent(e) || picsNav(true)
+    }
+    return
+  }
+
+  if (isVideoMode()) {
+    switch (e.code) {
+      case 'ArrowDown':
+      case 'ArrowUp':
+        return prevent(e) || videoSound(e.code === "ArrowUp")
+
+      case 'ArrowLeft':
+      case 'ArrowRight':
+        return prevent(e) || videoFf(e.code === "ArrowRight")
+
+      case 'KeyF':
+        return prevent(e) || videoFs()
     }
     return
   }
@@ -583,7 +687,7 @@ document.body.addEventListener('keydown', e => {
         return prevent(e) || onCut()
 
       case 'KeyR':
-        return prevent(e) || refresh()
+        return !e.shiftKey && prevent(e) || refresh()
 
       case 'KeyV':
         return prevent(e) || ensureMove() || onPaste()
