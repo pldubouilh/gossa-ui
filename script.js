@@ -337,12 +337,12 @@ async function padOn (a) {
     fileEdited = prompt('new filename', '')
     if (!fileEdited) { return }
     fileEdited = isTextFile(fileEdited) ? fileEdited : fileEdited + '.txt'
+    if (isDupe(fileEdited)) { return }
     editor.innerText = ''
-    setCursorTo(fileEdited)
-    storeLastArrowPos()
   }
 
   console.log('editing file', fileEdited)
+  setCursorTo(fileEdited)
   editor.style.display = crossIcon.style.display = 'block'
   table.style.display = 'none'
   editor.focus()
@@ -357,6 +357,7 @@ window.displayPad = padOn
 // quit pictures or editor
 function resetView () {
   currentActualPath = ""
+  softStatePushed = false
   table.style.display = 'table'
   picsHolder.src = transparentPixel
   videoHolder.src = ""
@@ -422,15 +423,20 @@ function storeLastArrowPos (flush) {
   }
 }
 
+function aboveBelowRightin(el) {
+  const itemPos = el.getBoundingClientRect()
+  return itemPos.top < 0 ? -1 : itemPos.bottom > window.innerHeight ? 1 : 0
+}
+
 function scrollToArrow () {
   const el = getASelected()
   while (1) {
-    const itemPos = el.getBoundingClientRect()
-    if (itemPos.top < 0) {
+    const pos = aboveBelowRightin(el)
+    if (pos === -1) {
       scrollBy(0, -300)
-    } else if (itemPos.bottom > window.innerHeight) {
+    } else if (pos === 1) {
       scrollBy(0, 300)
-    } else {
+    } else  {
       break
     }
   }
@@ -442,7 +448,7 @@ function clearArrowSelected () {
   arr.classList.remove('arrow-selected')
 }
 
-function setCursorTo (where) {
+function setCursorTo (where, noScroll) {
   clearArrowSelected()
   let a = allA.find(el => el.innerText === where || el.innerText === where+"/")
 
@@ -457,6 +463,7 @@ function setCursorTo (where) {
   const icon = a.parentElement.parentElement.querySelectorAll('.arrow-icon')[0]
   icon.classList.add('arrow-selected')
   scrollToArrow()
+  storeLastArrowPos()
 }
 
 function moveArrow (down) {
@@ -476,6 +483,36 @@ function moveArrow (down) {
   scrollToArrow()
 }
 
+const isTop = () => window.scrollY === 0
+const isBottom = () => (window.innerHeight + window.scrollY) >= document.body.offsetHeight
+
+function movePage(up) {
+  const current = getASelected().href
+
+  if (!up) {
+    const i = allA.findIndex(e => aboveBelowRightin(e) === 1)
+    if (isTop() && current !== allA[i - 1].href) {
+      return setCursorTo(allA[i - 1].innerText)
+    } else if (isBottom() && current !== allA[allA.length - 1].href) {
+      return setCursorTo(allA[allA.length - 1].innerText)
+    }
+
+    if (!allA[i-1]) return
+    setCursorTo(allA[i - 1].innerText)
+    scrollBy(0, window.innerHeight - 100)
+  } else {
+    const i = allA.findIndex(e => aboveBelowRightin(e) === 0)
+    if (isTop() && current !== allA[0].href) {
+      return setCursorTo(allA[0].innerText)
+    } else if (isBottom() && current !== allA[i].href) {
+      return setCursorTo(allA[i].innerText)
+    }
+
+    scrollBy(0, -(window.innerHeight - 100))
+    setCursorTo(allA[i].innerText)
+  }
+}
+
 // Pictures carousel
 const picTypes = ['.jpg', '.jpeg', '.png', '.gif']
 const isPic = src => src && picTypes.find(type => src.toLocaleLowerCase().includes(type))
@@ -488,7 +525,6 @@ function setImage () {
   picsHolder.src = src
   name = src.split('/').pop()
   setCursorTo(name)
-  storeLastArrowPos()
   history.replaceState({}, '', encodeURI(name))
 }
 
@@ -551,7 +587,6 @@ function videoSound(up) {
 async function videoOn (src) {
   const name = src.split('/').pop()
   setCursorTo(decodeURI(name))
-  storeLastArrowPos()
   currentActualPath = decodeURIComponent(location.pathname)
   table.style.display = 'none'
   crossIcon.style.display = 'block'
@@ -620,7 +655,6 @@ function setCursorToClosestTyped () {
   const a = allA.find(el => el.innerText.toLocaleLowerCase().startsWith(typedPath))
   if (!a) { return }
   setCursorTo(a.innerText)
-  storeLastArrowPos()
 }
 
 document.body.addEventListener('keydown', e => {
@@ -675,7 +709,14 @@ document.body.addEventListener('keydown', e => {
 
     case 'ArrowLeft':
       return prevent(e) || prevPage(location.href + '../')
-  }
+
+    case 'PageDown':
+    case 'PageUp':
+      return prevent(e) || movePage(e.key === "PageUp")
+
+    case 'Space':
+      return prevent(e) || movePage(e.shiftKey)
+    }
 
   // Ctrl keys
   if (e.ctrlKey || e.metaKey) {
