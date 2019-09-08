@@ -40,14 +40,6 @@ const prependPath = a => a.startsWith('/') ? a : decodeURI(location.pathname) + 
 const prevent = e => e.preventDefault()
 const flicker = w => w.classList.remove('runFade') || void w.offsetWidth || w.classList.add('runFade')
 
-async function hash(message) {
-  const msgUint8 = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex;
-}
-
 // Manual upload
 manualUpload.addEventListener('change', () => Array.from(manualUpload.files).forEach(f => isDupe(f.name) || postFile(f, '/' + f.name)), false)
 
@@ -403,15 +395,12 @@ window.rename = (e, commit) => {
 // Keyboard Arrow
 let storeArrowToken
 
-
-
-async function setPathServer() {
+function setPathServer() {
   if (!storeArrowToken) return
   clearTimeout(storeArrowToken)
   storeArrowToken = 0
   const path = currentActualPath.length > 0 ? currentActualPath : decodeURIComponent(location.pathname)
-  const pos = await hash(getASelected().innerText)
-  historyCallSet([path, pos])
+  historyCallSet([path, getASelected().innerText, "hash"])
 }
 
 function storeLastArrowPos (flush) {
@@ -485,9 +474,12 @@ function moveArrow (down) {
 
 const isTop = () => window.scrollY === 0
 const isBottom = () => (window.innerHeight + window.scrollY) >= document.body.offsetHeight
+const hasScroll = () => table.clientHeight > window.innerHeight
 
 function movePage(up) {
   const current = getASelected().href
+
+  if (!hasScroll()) return
 
   if (!up) {
     const i = allA.findIndex(e => aboveBelowRightin(e) === 1)
@@ -564,24 +556,15 @@ function picsNav (down) {
 const videosTypes = ['.mp4', '.webm', '.ogv']
 const isVideo = src => src && videosTypes.find(type => src.toLocaleLowerCase().includes(type))
 const isVideoMode = () => video.style.display === 'flex'
+const videoFs = () => video.requestFullscreen()
+const videoFf = future => { videoHolder.currentTime += future ? 10 : -10 }
+const videoSound = up => { videoHolder.volume += up ? 0.1 : -0.1 }
+videoHolder.oncanplay = () => videoHolder.play()
 
-async function setVideoTimeServer () {
+function setVideoTimeServer () {
+  if (!isVideoMode()) { return }
   const time = parseInt(videoHolder.currentTime) + ""
-  const path = await hash(videoHolder.src)
-  historyCallSet([path, parseInt(time) + ""])
-}
-
-function videoFs () {
-  video.requestFullscreen()
-}
-
-
-function videoFf(future) {
-  videoHolder.currentTime += future ? 10 : -10
-}
-
-function videoSound(up) {
-  videoHolder.volume += up ? 0.1 : -0.1
+  historyCallSet([videoHolder.src, time, "skipHash"])
 }
 
 async function videoOn (src) {
@@ -593,20 +576,11 @@ async function videoOn (src) {
   video.style.display = 'flex'
   videoHolder.pause()
 
-  // If there is a current one save it at the position
-  if (videoHolder.src !== "") {
-    setVideoTimeServer()
-  }
-
-  historyCallGet(await hash(src), e => {
+  historyCallGet(src, e => {
     if (e.target) videoHolder.currentTime = parseInt(e.target.responseText) || 0
   })
 
   videoHolder.src = src
-  videoHolder.oncanplay = () => {
-    videoHolder.play()
-    videoHolder.oncanplay = null
-  }
   pushSoftState(decodeURI(name))
   return true
 }
