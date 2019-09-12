@@ -354,6 +354,7 @@ function resetView () {
   picsHolder.src = transparentPixel
   videoHolder.src = ""
   editor.style.display = pics.style.display = video.style.display = crossIcon.style.display = 'none'
+  scrollToArrow()
 }
 
 window.quitAll = () => picsOff() || videosOff() || padOff()
