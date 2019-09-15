@@ -554,7 +554,7 @@ function picsNav (down) {
 
 
 // Video player
-const videosTypes = ['.mp4', '.webm', '.ogv']
+const videosTypes = ['.mp4', '.webm', '.ogv', '.ogg', '.mp3', 'flac']
 const isVideo = src => src && videosTypes.find(type => src.toLocaleLowerCase().includes(type))
 const isVideoMode = () => video.style.display === 'flex'
 const videoFs = () => video.requestFullscreen()
@@ -727,7 +727,10 @@ document.body.addEventListener('keydown', e => {
     typedPath += e.code.replace('Key', '').toLocaleLowerCase()
     clearTimeout(typedToken)
     typedToken = setTimeout(() => { typedPath = '' }, 1000)
-    setCursorToClosestTyped()
+
+    const a = allA.find(el => el.innerText.toLocaleLowerCase().startsWith(typedPath)) || allA.find(el => el.innerText.toLocaleLowerCase().includes(typedPath))
+    if (!a) { return }
+    setCursorTo(a.innerText)
   }
 }, false)
 
