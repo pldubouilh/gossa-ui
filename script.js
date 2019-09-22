@@ -43,14 +43,19 @@ const flicker = w => w.classList.remove('runFade') || void w.offsetWidth || w.cl
 // Manual upload
 manualUpload.addEventListener('change', () => Array.from(manualUpload.files).forEach(f => isDupe(f.name) || postFile(f, '/' + f.name)), false)
 
+async function getPage(href) {
+  const r = await fetch(href, { credentials: 'include' })
+  const t = await r.text()
+  return new DOMParser().parseFromString(t, 'text/html')
+}
+
+
 // Soft nav
-function browseTo (href, flickerDone, skipHistory) {
+async function browseTo (href, flickerDone, skipHistory) {
   storeLastArrowPos(true)
-
-  fetch(href, { credentials: 'include' }).then(r => r.text().then(t => {
-    const parsed = new DOMParser().parseFromString(t, 'text/html')
+  try {
+    const parsed = await getPage(href)
     table.innerHTML = parsed.querySelector('table').innerHTML
-
     const title = parsed.head.querySelector('title').innerText
     // check if is current path - if so skip following
     if (pageTitle.innerText !== title) {
@@ -61,12 +66,11 @@ function browseTo (href, flickerDone, skipHistory) {
       pageH1.innerText = '.' + title
     }
 
-    if (flickerDone) {
-      flicker(okBadge)
-    }
-
     init()
-  })).catch(() => flicker(sadBadge))
+    if (flickerDone) flicker(okBadge)
+  } catch (error) {
+    flicker(sadBadge)
+  }
 }
 
 window.onClickLink = e => {
@@ -613,6 +617,29 @@ function onCut () {
   cuts.push(prependPath(decode(a.href)))
 }
 
+async function multiDownload (t) {
+  const sel = getASelected()
+  const anew = document.createElement('a')
+  document.body.appendChild(anew)
+
+  function dl(a) {
+    if (a.innerHTML.endsWith("../")) return
+    anew.setAttribute("download", a.innerText)
+    anew.href = sel.href + "/" + a.innerText
+    anew.click()
+  }
+
+  if (!isFolder(sel)) {
+    dl(sel)
+  } else {
+    const p = await getPage(sel.href)
+    const as = p.querySelector('table').querySelectorAll("a")
+    if (as.length < 5 || confirm("dowload " + as.length + " files ?")) as.forEach(dl);
+  }
+
+  document.body.removeChild(anew)
+}
+
 // Kb handler
 let typedPath = ''
 let typedToken = null
@@ -624,12 +651,6 @@ function cpPath () {
   t.select()
   document.execCommand('copy')
   document.body.removeChild(t)
-}
-
-function setCursorToClosestTyped () {
-  const a = allA.find(el => el.innerText.toLocaleLowerCase().startsWith(typedPath))
-  if (!a) { return }
-  setCursorTo(a.innerText)
 }
 
 document.body.addEventListener('keydown', e => {
@@ -694,7 +715,7 @@ document.body.addEventListener('keydown', e => {
     }
 
   // Ctrl keys
-  if (e.ctrlKey || e.metaKey) {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
     switch (e.code) {
       case 'KeyC':
         return prevent(e) || cpPath()
@@ -703,7 +724,7 @@ document.body.addEventListener('keydown', e => {
         return prevent(e) || onCut()
 
       case 'KeyR':
-        return !e.shiftKey && prevent(e) || refresh()
+        return prevent(e) || refresh()
 
       case 'KeyV':
         return prevent(e) || ensureMove() || onPaste()
@@ -714,8 +735,11 @@ document.body.addEventListener('keydown', e => {
       case 'KeyE':
         return prevent(e) || window.rename(e)
 
-      case 'KeyD':
+      case 'KeyM':
         return prevent(e) || window.mkdirBtn()
+
+      case 'KeyD':
+        return prevent(e) || multiDownload()
 
       case 'KeyU':
         return prevent(e) || manualUpload.click()
