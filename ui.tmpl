@@ -36,6 +36,7 @@
         <tr><td>any other letter</td><td>shallow search</td></tr>
     </tbody></table></div>
 
+    <a id="dlHelper" style="display: none;"></a>
     <div style="display: none;" onclick="window.quitAll()" id="quitAll"><i style="display: none;" id="toast">cant reach server</i></div>
     <div style="display: none;" contenteditable="true" id="text-editor"></div>
     <div id="drop-grid"></div>
@@ -71,9 +72,11 @@
     {{end}}
     </table>
 </body>
-<div id="progress" style="display:none;">
-    <span id="dlBarName"></span>
-    <div id="dlBarPc">1%</div>
+<div id="upBar" class="bar">
+    <span style="display: none;" class="barName" id="upBarName"></span>
+    <div style="display: none; background-color: green;" class="barPc" id="upBarPc">1%</div>
+    <span style="display: none;" class="barName" id="dlBarName"></span>
+    <div style="display: none; background-color: crimson;" class="barPc" id="dlBarPc">1</div>
 </div>
 <div id="ok" class="notif icon-large-ok"></div>
 <div id="sad" class="notif icon-large-sad-server"></div>

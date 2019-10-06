@@ -143,8 +143,8 @@ h1 {
   position: fixed;
   right: 20px;
   top: 20px;
-  width: 2em;
-  height: 2em;
+  width: 40px;
+  height: 40px;
   cursor: pointer;
   z-index: 101;
 }
@@ -153,7 +153,7 @@ h1 {
   padding-bottom: 80px;
 }
 
-#progress {
+.bar {
   width: 99%;
   left: 0.5%;
   right: 0.5%;
@@ -165,12 +165,12 @@ h1 {
   background-color: #2d3436;
 }
 
-#dlBarName {
+.barName {
   width: 100%;
-  margin-top: 15px;
+  /* margin-top: 15px; */
 }
 
-#dlBarPc {
+.barPc {
   width: 1%;
   height: 35px;
   text-align: center;
@@ -178,7 +178,6 @@ h1 {
   min-width: 30px;
   margin-top: 5px;
   color: white;
-  background-color: green;
 }
 
 #drop-grid {
@@ -266,7 +265,8 @@ h1 {
 }
 
 #videoHolder {
-  height: 100%;
+  height: auto;
+  max-height: 100%;
   width: 100%;
   cursor: pointer;
   object-fit: contain;

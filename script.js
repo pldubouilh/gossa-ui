@@ -10,9 +10,10 @@ const warningMsg = () => 'Leaving will interrupt transfer?\n'
 const rmMsg = () => !confirm('Remove file?\n')
 const ensureMove = () => !confirm('move items?')
 
-const barName = document.getElementById('dlBarName')
-const barPc = document.getElementById('dlBarPc')
-const barDiv = document.getElementById('progress')
+const upBarName = document.getElementById('upBarName')
+const upBarPc = document.getElementById('upBarPc')
+const dlBarName = document.getElementById('dlBarName')
+const dlBarPc = document.getElementById('dlBarPc')
 const upGrid = document.getElementById('drop-grid')
 const pics = document.getElementById('pics')
 const picsHolder = document.getElementById('picsHolder')
@@ -29,6 +30,7 @@ const crossIcon = document.getElementById('quitAll')
 const toast = document.getElementById('toast')
 const table = document.getElementById('linkTable')
 const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+const dlHelper = document.getElementById('dlHelper')
 
 // helpers
 let allA
@@ -169,7 +171,7 @@ function shouldRefresh () {
     totalUploads = 0
     totalUploadsSize = 0
     totalUploadedSize = []
-    barDiv.style.display = 'none'
+    upBarPc.style.display =  upBarName.style.display = 'none'
     table.classList.remove('uploading-table')
     refresh()
   }
@@ -179,8 +181,8 @@ function updatePercent (ev) {
   totalUploadedSize[ev.target.id] = ev.loaded
   const ttlDone = totalUploadedSize.reduce((s, x) => s + x)
   const pc = Math.floor(100 * ttlDone / totalUploadsSize) + '%'
-  barPc.innerText = pc
-  barPc.style.width = pc
+  upBarPc.innerText = pc
+  upBarPc.style.width = pc
 }
 
 function postFile (file, path) {
@@ -188,10 +190,10 @@ function postFile (file, path) {
   window.onbeforeunload = warningMsg
 
   table.classList.add('uploading-table')
-  barDiv.style.display = 'block'
+  upBarPc.style.display = upBarName.style.display = 'block'
   totalUploads += 1
   totalUploadsSize += file.size
-  barName.innerText = totalUploads > 1 ? totalUploads + ' files' : file.name
+  upBarName.innerText = totalUploads > 1 ? totalUploads + ' files' : file.name
 
   const formData = new FormData()
   formData.append(file.name, file)
@@ -632,27 +634,60 @@ function onCut () {
   cuts.push(prependPath(decode(a.href)))
 }
 
+let downloadToken = 0
+let downloading = []
+let downloadingTtl = 0
+let dlRate = 0
+
+function updateDlUi() {
+  dlBarName.innerText = "download started, new download every " + dlRate + " seconds"
+  dlBarPc.style.display = dlBarName.style.display = 'block'
+  dlBarPc.style.width = Math.floor(100 * (downloadingTtl - downloading.length) / downloadingTtl) + '%'
+  dlBarPc.innerText = (downloadingTtl - downloading.length) + "/" + (downloadingTtl)
+}
+
+function dl(name, href, skipAppend) {
+  if (!name || !href) return
+  console.log('downloading', name)
+  dlHelper.setAttribute('download', name)
+  dlHelper.href = skipAppend ? href : href + '/' + name
+  dlHelper.click()
+}
+
+function dlNext (a) {
+  a = downloading.pop()
+  dl(a.n, a.h)
+
+  if (downloading.length == 0) {
+    // maybe do warning unload here
+    clearInterval(downloadToken)
+    downloadingTtl = dlRate = downloadToken = 0
+    dlBarPc.style.display = dlBarName.style.display = 'none'
+  } else {
+    updateDlUi()
+  }
+}
+
 async function multiDownload (t) {
   const sel = getASelected()
-  const anew = document.createElement('a')
-  document.body.appendChild(anew)
-
-  function dl(a) {
-    if (a.innerHTML.endsWith("../")) return
-    anew.setAttribute("download", a.innerText)
-    anew.href = sel.href + "/" + a.innerText
-    anew.click()
-  }
 
   if (!isFolder(sel)) {
-    dl(sel)
-  } else {
-    const p = await getPage(sel.href)
-    const as = p.getElementById('linkTable').querySelectorAll("a")
-    if (as.length < 5 || confirm("dowload " + as.length + " files ?")) as.forEach(dl);
+    return dl(sel.innerText, sel.href, true)
   }
 
-  document.body.removeChild(anew)
+  if (!dlRate) dlRate = prompt('delay between files (seconds)', 30)
+  if (!dlRate) return
+
+  const p = await getPage(sel.href)
+  const as = Array.from(p.getElementById('linkTable').querySelectorAll("a")).filter(a => !a.innerHTML.endsWith("../")).map(a => { return { n:a.innerText,  h:sel.href } })
+  downloading = downloading.concat(as)
+  downloadingTtl += as.length
+
+  if (!downloadToken) {
+    dlNext()
+    downloadToken = setInterval(dlNext, dlRate * 1000)
+  }
+  updateDlUi()
 }
 
 // Kb handler
@@ -672,6 +707,8 @@ document.body.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     return resetBackgroundLinks() || window.quitAll()
   }
+
+  if (isHelpMode()) { return window.quitAll() }
 
   if (isEditorMode()) { return }
 
