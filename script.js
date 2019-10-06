@@ -443,6 +443,7 @@ function clearArrowSelected () {
   arr.classList.remove('arrow-selected')
 }
 
+window.setCursorTo = setCursorTo
 function setCursorTo (where) {
   clearArrowSelected()
   let a = allA.find(el => el.innerText === where || el.innerText === where+"/")
