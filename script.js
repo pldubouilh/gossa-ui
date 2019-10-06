@@ -19,6 +19,7 @@ const picsHolder = document.getElementById('picsHolder')
 const video = document.getElementById('video')
 const videoHolder = document.getElementById('videoHolder')
 const manualUpload = document.getElementById('clickupload')
+const help = document.getElementById('help')
 const okBadge = document.getElementById('ok')
 const sadBadge = document.getElementById('sad')
 const pageTitle = document.head.querySelector('title')
@@ -26,7 +27,7 @@ const pageH1 = document.body.querySelector('h1')
 const editor = document.getElementById('text-editor')
 const crossIcon = document.getElementById('quitAll')
 const toast = document.getElementById('toast')
-const table = document.querySelector('table')
+const table = document.getElementById('linkTable')
 const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
 // helpers
@@ -55,7 +56,7 @@ async function browseTo (href, flickerDone, skipHistory) {
   storeLastArrowPos(true)
   try {
     const parsed = await getPage(href)
-    table.innerHTML = parsed.querySelector('table').innerHTML
+    table.innerHTML = parsed.getElementById('linkTable').innerHTML
     const title = parsed.head.querySelector('title').innerText
     // check if is current path - if so skip following
     if (pageTitle.innerText !== title) {
@@ -361,7 +362,7 @@ function resetView () {
   scrollToArrow()
 }
 
-window.quitAll = () => picsOff() || videosOff() || padOff()
+window.quitAll = () => helpOff() || picsOff() || videosOff() || padOff()
 
 // Mkdir icon
 window.mkdirBtn = function () {
@@ -442,7 +443,7 @@ function clearArrowSelected () {
   arr.classList.remove('arrow-selected')
 }
 
-function setCursorTo (where, noScroll) {
+function setCursorTo (where) {
   clearArrowSelected()
   let a = allA.find(el => el.innerText === where || el.innerText === where+"/")
 
@@ -598,6 +599,19 @@ function videosOff () {
   return true
 }
 
+// help
+const isHelpMode = () => help.style.display === 'block'
+
+function helpOn() {
+  if (isHelpMode()) helpOff()
+  help.style.display = 'block'
+}
+
+window.helpOff = function helpOff() {
+  if (!isHelpMode()) return
+  help.style.display = 'none'
+  return true
+}
 
 // Paste handler
 let cuts = []
@@ -633,7 +647,7 @@ async function multiDownload (t) {
     dl(sel)
   } else {
     const p = await getPage(sel.href)
-    const as = p.querySelector('table').querySelectorAll("a")
+    const as = p.getElementById('linkTable').querySelectorAll("a")
     if (as.length < 5 || confirm("dowload " + as.length + " files ?")) as.forEach(dl);
   }
 
@@ -655,7 +669,7 @@ function cpPath () {
 
 document.body.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
-    return resetBackgroundLinks() || picsOff() || videosOff() || padOff()
+    return resetBackgroundLinks() || window.quitAll()
   }
 
   if (isEditorMode()) { return }
@@ -720,6 +734,9 @@ document.body.addEventListener('keydown', e => {
       case 'KeyC':
         return prevent(e) || cpPath()
 
+      case 'KeyH':
+        return prevent(e) || helpOn()
+
       case 'KeyX':
         return prevent(e) || onCut()
 
@@ -764,7 +781,7 @@ function init () {
   imgsIndex = softStatePushed = 0
 
   if (!getArrowSelected()) {
-    table.querySelector(".arrow-icon").classList.add("arrow-selected")
+    table.querySelectorAll(".arrow-icon")[1].classList.add("arrow-selected")
   }
 
   scrollToArrow()

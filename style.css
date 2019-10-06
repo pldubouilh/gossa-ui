@@ -293,6 +293,40 @@ h1 {
   right: 30px;
 }
 
+#helpHead {
+  margin-top: 60px;
+  text-align: center;
+}
+
+#helpTable {
+  border-collapse: collapse;
+  width: 70%;
+  max-width: 790px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 80px;
+}
+
+#helpTable td {
+  width: 200px;
+  padding: 9px;
+  border: 1px solid #fff;
+  color: white;
+  font-size: 18px;
+  margin: 0;
+}
+
+#help {
+  background-color: rgba(1,1,1,0.8);
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: 99;
+  font-size: 1em !important;
+}
+
 .icon-large-folder {
   background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAJFBMVEUAAACZmQAICAj4+Pj//5nMzGb/+/AAAAD/zJkzMwAAAP////+gebovAAAAAXRSTlMAQObYZgAAAAFiS0dECx/XxMAAAAAHdElNRQfiBhgXAy5jJ3EAAAAA1klEQVQoz42RMQ7CMBAEQ0mZIIp0/AGecJFO7kC2FKXmATxikaxUtPS48Ss5XxwnoWI7j3f3fHJV/aFa1KzOuwsRdacFHCjpthjuChbL0U261ipJnDd65IokJhCaGTCzEOZ25SAwaAUgASoOyFFzxWEsEkQGz2BskFJfHMMwWB07AVAXg/QwZscYPzHqXAVicDE4eJ47QOOoHexzhINxQRxIEVkC6I217OGLg9DLIn7qkHHEWiAvEwAdJyQlNKK3gKfcITuxZjzrO+qt2mr/3uj1z1//6AsSG3mwAQQN9wAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAxOC0wNi0yNFQyMzowMzo0Ni0wNDowMFfZ8nYAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTgtMDYtMjRUMjM6MDM6NDYtMDQ6MDAmhErKAAAAAElFTkSuQmCC");
 }
