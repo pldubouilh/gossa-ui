@@ -29,7 +29,7 @@ const editor = document.getElementById('text-editor')
 const crossIcon = document.getElementById('quitAll')
 const toast = document.getElementById('toast')
 const table = document.getElementById('linkTable')
-const transparentPixel = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
 const dlHelper = document.getElementById('dlHelper')
 
 // helpers
@@ -46,12 +46,11 @@ const flicker = w => w.classList.remove('runFade') || void w.offsetWidth || w.cl
 // Manual upload
 manualUpload.addEventListener('change', () => Array.from(manualUpload.files).forEach(f => isDupe(f.name) || postFile(f, '/' + f.name)), false)
 
-async function getPage(href) {
+async function getPage (href) {
   const r = await fetch(href, { credentials: 'include' })
   const t = await r.text()
   return new DOMParser().parseFromString(t, 'text/html')
 }
-
 
 // Soft nav
 async function browseTo (href, flickerDone, skipHistory) {
@@ -142,8 +141,8 @@ window.onunload = () => {
   setPathServer()
 }
 
-function historyCallSet(args) {
-  const call = "historySet"
+function historyCallSet (args) {
+  const call = 'historySet'
   console.log('RPC', call, args)
   navigator.sendBeacon(location.origin + window.extraPath + '/rpc', JSON.stringify({ call, args }))
 }
@@ -171,7 +170,7 @@ function shouldRefresh () {
     totalUploads = 0
     totalUploadsSize = 0
     totalUploadedSize = []
-    upBarPc.style.display =  upBarName.style.display = 'none'
+    upBarPc.style.display = upBarName.style.display = 'none'
     table.classList.remove('uploading-table')
     refresh()
   }
@@ -355,11 +354,11 @@ window.displayPad = padOn
 
 // quit pictures or editor
 function resetView () {
-  currentActualPath = ""
+  currentActualPath = ''
   softStatePushed = false
   table.style.display = 'table'
   picsHolder.src = transparentPixel
-  videoHolder.src = ""
+  videoHolder.src = ''
   editor.style.display = pics.style.display = video.style.display = crossIcon.style.display = 'none'
   scrollToArrow()
 }
@@ -375,7 +374,7 @@ window.mkdirBtn = function () {
 }
 
 // Icon click handler
-const getBtnA = e => e.target.closest("tr").querySelector('a')
+const getBtnA = e => e.target.closest('tr').querySelector('a')
 
 window.rm = e => {
   clearTimeout(window.clickToken)
@@ -393,7 +392,7 @@ window.rename = (e, commit) => {
   }
 
   const target = e.key ? getASelected() : getBtnA(e)
-  if (target.innerText === "../") return
+  if (target.innerText === '../') return
   const chg = prompt('rename to', target.innerHTML)
   if (chg && !isDupe(chg)) {
     mvCall(prependPath(target.innerHTML), prependPath(chg), refresh)
@@ -403,12 +402,12 @@ window.rename = (e, commit) => {
 // Keyboard Arrow
 let storeArrowToken
 
-function setPathServer() {
+function setPathServer () {
   if (!storeArrowToken) return
   clearTimeout(storeArrowToken)
   storeArrowToken = 0
   const path = currentActualPath.length > 0 ? currentActualPath : decodeURIComponent(location.pathname)
-  historyCallSet([path, getASelected().innerText, "hash"])
+  historyCallSet([path, getASelected().innerText, 'hash'])
 }
 
 function storeLastArrowPos (flush) {
@@ -420,7 +419,7 @@ function storeLastArrowPos (flush) {
   }
 }
 
-function aboveBelowRightin(el) {
+function aboveBelowRightin (el) {
   const itemPos = el.getBoundingClientRect()
   return itemPos.top < 0 ? -1 : itemPos.bottom > window.innerHeight ? 1 : 0
 }
@@ -433,7 +432,7 @@ function scrollToArrow () {
       scrollBy(0, -300)
     } else if (pos === 1) {
       scrollBy(0, 300)
-    } else  {
+    } else {
       break
     }
   }
@@ -448,7 +447,7 @@ function clearArrowSelected () {
 window.setCursorTo = setCursorTo
 function setCursorTo (where) {
   clearArrowSelected()
-  let a = allA.find(el => el.innerText === where || el.innerText === where+"/")
+  let a = allA.find(el => el.innerText === where || el.innerText === where + '/')
 
   if (!a) {
     if (allA[0].innerText === '../') {
@@ -485,7 +484,7 @@ const isTop = () => window.scrollY === 0
 const isBottom = () => (window.innerHeight + window.scrollY) >= document.body.offsetHeight
 const hasScroll = () => table.clientHeight > window.innerHeight
 
-function movePage(up) {
+function movePage (up) {
   const current = getASelected().href
 
   if (!hasScroll()) return
@@ -498,7 +497,7 @@ function movePage(up) {
       return setCursorTo(allA[allA.length - 1].innerText)
     }
 
-    if (!allA[i-1]) return
+    if (!allA[i - 1]) return
     setCursorTo(allA[i - 1].innerText)
     scrollBy(0, window.innerHeight - 100)
   } else {
@@ -519,12 +518,12 @@ const picTypes = ['.jpg', '.jpeg', '.png', '.gif']
 const isPic = src => src && picTypes.find(type => src.toLocaleLowerCase().includes(type))
 const isPicMode = () => pics.style.display === 'flex'
 window.picsNav = () => picsNav(true)
-let currentActualPath = ""
+let currentActualPath = ''
 
 function setImage () {
   const src = allImgs[imgsIndex]
   picsHolder.src = src
-  name = src.split('/').pop()
+  const name = src.split('/').pop()
   setCursorTo(name)
   history.replaceState({}, '', encodeURI(name))
 }
@@ -560,7 +559,6 @@ function picsNav (down) {
   return true
 }
 
-
 // Video player
 const videosTypes = ['.mp4', '.webm', '.ogv', '.ogg', '.mp3', 'flac']
 const isVideo = src => src && videosTypes.find(type => src.toLocaleLowerCase().includes(type))
@@ -572,8 +570,8 @@ videoHolder.oncanplay = () => videoHolder.play()
 
 function setVideoTimeServer () {
   if (!isVideoMode()) { return }
-  const time = parseInt(videoHolder.currentTime) + ""
-  historyCallSet([videoHolder.src, time, "skipHash"])
+  const time = parseInt(videoHolder.currentTime) + ''
+  historyCallSet([videoHolder.src, time, 'skipHash'])
 }
 
 async function videoOn (src) {
@@ -605,12 +603,13 @@ function videosOff () {
 // help
 const isHelpMode = () => help.style.display === 'block'
 
-function helpOn() {
+function helpToggle () {
   if (isHelpMode()) helpOff()
   help.style.display = 'block'
 }
 
-window.helpOff = function helpOff() {
+window.helpOff = helpOff
+function helpOff () {
   if (!isHelpMode()) return
   help.style.display = 'none'
   return true
@@ -639,11 +638,11 @@ let downloading = []
 let downloadingTtl = 0
 let dlRate = 0
 
-function updateDlUi() {
-  dlBarName.innerText = "download started, new download every " + dlRate + " seconds"
+function updateDlUi () {
+  dlBarName.innerText = 'download started, new download every ' + dlRate + ' seconds'
   dlBarPc.style.display = dlBarName.style.display = 'block'
   dlBarPc.style.width = Math.floor(100 * (downloadingTtl - downloading.length) / downloadingTtl) + '%'
-  dlBarPc.innerText = (downloadingTtl - downloading.length) + "/" + (downloadingTtl)
+  dlBarPc.innerText = (downloadingTtl - downloading.length) + '/' + (downloadingTtl)
 }
 
 function dl(name, href, skipAppend) {
@@ -679,7 +678,7 @@ async function multiDownload (t) {
   if (!dlRate) return
 
   const p = await getPage(sel.href)
-  const as = Array.from(p.getElementById('linkTable').querySelectorAll("a")).filter(a => !a.innerHTML.endsWith("../")).map(a => { return { n:a.innerText,  h:sel.href } })
+  const as = Array.from(p.getElementById('linkTable').querySelectorAll('a')).filter(a => !a.innerHTML.endsWith('../')).map(a => { return { n: a.innerText, h: sel.href } })
   downloading = downloading.concat(as)
   downloadingTtl += as.length
 
@@ -708,7 +707,7 @@ document.body.addEventListener('keydown', e => {
     return resetBackgroundLinks() || window.quitAll()
   }
 
-  if (isHelpMode()) { return window.quitAll() }
+  if (isHelpMode()) { return prevent(e) || window.quitAll() }
 
   if (isEditorMode()) { return }
 
@@ -731,11 +730,11 @@ document.body.addEventListener('keydown', e => {
     switch (e.code) {
       case 'ArrowDown':
       case 'ArrowUp':
-        return prevent(e) || videoSound(e.code === "ArrowUp")
+        return prevent(e) || videoSound(e.code === 'ArrowUp')
 
       case 'ArrowLeft':
       case 'ArrowRight':
-        return prevent(e) || videoFf(e.code === "ArrowRight")
+        return prevent(e) || videoFf(e.code === 'ArrowRight')
 
       case 'KeyF':
         return prevent(e) || videoFs()
@@ -760,11 +759,11 @@ document.body.addEventListener('keydown', e => {
 
     case 'PageDown':
     case 'PageUp':
-      return prevent(e) || movePage(e.key === "PageUp")
+      return prevent(e) || movePage(e.key === 'PageUp')
 
     case 'Space':
       return prevent(e) || movePage(e.shiftKey)
-    }
+  }
 
   // Ctrl keys
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
@@ -773,7 +772,7 @@ document.body.addEventListener('keydown', e => {
         return prevent(e) || cpPath()
 
       case 'KeyH':
-        return prevent(e) || helpOn()
+        return prevent(e) || helpToggle()
 
       case 'KeyX':
         return prevent(e) || onCut()
@@ -819,7 +818,7 @@ function init () {
   imgsIndex = softStatePushed = 0
 
   if (!getArrowSelected()) {
-    table.querySelectorAll(".arrow-icon")[1].classList.add("arrow-selected")
+    table.querySelectorAll('.arrow-icon')[1].classList.add('arrow-selected')
   }
 
   scrollToArrow()
