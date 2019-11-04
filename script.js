@@ -603,15 +603,18 @@ function videosOff () {
 // help
 const isHelpMode = () => help.style.display === 'block'
 
-function helpToggle () {
-  if (isHelpMode()) helpOff()
+const helpToggle = () => isHelpMode() ? helpOff() : helpOn()
+
+function helpOn () {
   help.style.display = 'block'
+  table.style.display = 'none'
 }
 
 window.helpOff = helpOff
 function helpOff () {
   if (!isHelpMode()) return
   help.style.display = 'none'
+  table.style.display = 'table'
   return true
 }
 
