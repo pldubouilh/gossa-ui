@@ -79,6 +79,7 @@ async function browseTo (href, flickerDone, skipHistory) {
 window.onClickLink = e => {
   // follow dirs
   if (isFolder(e.target)) {
+    setCursorTo(e.target.innerText)
     browseTo(e.target.href)
     return false
   // enable notepad if relevant
@@ -108,7 +109,7 @@ function pushSoftState (d) {
 
 const refresh = () => browseTo(location.href, true)
 
-const softPrev = () => history.replaceState({}, '', decodeURI(location.href.split('/').slice(0, -1).join('/') + '/'))
+const softPrev = () => history.replaceState({}, '', location.href.split('/').slice(0, -1).join('/') + '/')
 
 const isAtExtraPath = url => location.origin + window.extraPath + '/../' === url
 const prevPage = (url, skipHistory) => window.quitAll() || isAtExtraPath(url) || browseTo(url, false, skipHistory)
@@ -826,7 +827,7 @@ document.body.addEventListener('keydown', e => {
   }
 }, false)
 
-function setTitle() {
+function setTitle () {
   pageH1.innerHTML = '<span>' + pageH1.innerText.split('/').join('/</span><span>') + '</span>'
 }
 
