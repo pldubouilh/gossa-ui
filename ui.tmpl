@@ -42,7 +42,7 @@
     <div id="drop-grid"></div>
     <input type="file" id="clickupload" style="display:none"/>
 
-    <h1>.{{.Title}}</h1>
+    <h1 onclick="return titleClick(event)">.{{.Title}}</h1>
 
     <div id="icHolder">
         <div style="display:none;" onclick="document.getElementById('clickupload').click()" class="ic icon-large-upload manualUp"></div>

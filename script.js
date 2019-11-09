@@ -66,6 +66,7 @@ async function browseTo (href, flickerDone, skipHistory) {
       }
       pageTitle.innerText = title
       pageH1.innerText = '.' + title
+      setTitle()
     }
 
     init()
@@ -222,6 +223,14 @@ function pushEntry (entry) {
   }
 
   parseDomItem(entry, true)
+}
+
+window.titleClick = function (e) {
+  const p = Array.from(document.querySelector("h1").childNodes).map(k => k.innerText)
+  const i = p.findIndex(s => s === e.target.innerText)
+  const dst = p.slice(0, i + 1).join("").slice(1)
+  const target = location.origin + window.extraPath + encodeURI(dst)
+  browseTo(target, false)
 }
 
 // Move files and folders
@@ -535,7 +544,9 @@ function picsOn (href) {
   table.style.display = 'none'
   crossIcon.style.display = 'block'
   pics.style.display = 'flex'
-  pushSoftState(href.split('/').pop())
+  const name = href.split('/').pop()
+  setCursorTo(decodeURI(name))
+  pushSoftState(name)
   return true
 }
 
@@ -815,6 +826,10 @@ document.body.addEventListener('keydown', e => {
   }
 }, false)
 
+function setTitle() {
+  pageH1.innerHTML = '<span>' + pageH1.innerText.split('/').join('/</span><span>') + '</span>'
+}
+
 function init () {
   allA = Array.from(document.querySelectorAll('a.list-links'))
   allImgs = allA.map(el => el.href).filter(isPic)
@@ -824,6 +839,7 @@ function init () {
     table.querySelectorAll('.arrow-icon')[1].classList.add('arrow-selected')
   }
 
+  setTitle()
   scrollToArrow()
   console.log('Browsed to ' + location.href)
 

@@ -106,10 +106,15 @@ td.display-name {
 
 h1 {
   display: inline-block;
-  margin-top: 30px;
+  margin-top: 20px;
   word-wrap: break-word;
   width: 80%;
   margin-bottom: 28px;
+  cursor: pointer;
+}
+
+h1 > span:hover {
+  color: #f1c40f;
 }
 
 #icHolder {
@@ -306,6 +311,7 @@ h1 {
   margin-left: auto;
   margin-right: auto;
   margin-top: 80px;
+  margin-bottom: 80px;
   overflow-y: auto;
 }
 
@@ -324,6 +330,8 @@ h1 {
   top: 0px;
   left: 0px;
   right: 0px;
+  bottom: 0px;
+  overflow-y: scroll;
   z-index: 99;
   font-size: 1em !important;
 }
