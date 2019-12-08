@@ -46,7 +46,6 @@ manualUpload.addEventListener('change', () => Array.from(manualUpload.files).for
 
 // Soft nav
 async function browseTo (href, flickerDone, skipHistory) {
-  storeLastArrowPos(true)
   try {
     const r = await fetch(href, { credentials: 'include' })
     const t = await r.text()
@@ -74,7 +73,7 @@ async function browseTo (href, flickerDone, skipHistory) {
 window.onClickLink = e => {
   // follow dirs
   if (isFolder(e.target)) {
-    setCursorTo(e.target.innerText)
+    storeArrow(e.target.innerText)
     browseTo(e.target.href)
     return false
   // enable notepad if relevant
@@ -85,7 +84,7 @@ window.onClickLink = e => {
   } else if (isPic(e.target.href) && !isPicMode()) {
     picsOn(e.target.href)
     return false
-    // toggle videos mode
+  // toggle videos mode
   } else if (isVideo(e.target.href) && !isVideoMode()) {
     videoOn(e.target.href)
     return false
@@ -133,18 +132,6 @@ function rpc (call, args, cb) {
   xhr.onerror = () => flicker(sadBadge)
 }
 
-window.onunload = () => {
-  setVideoTimeServer()
-  setPathServer()
-}
-
-function historyCallSet (args) {
-  const call = 'historySet'
-  console.log('RPC', call, args)
-  navigator.sendBeacon(location.origin + window.extraPath + '/rpc', JSON.stringify({ call, args }))
-}
-
-const historyCallGet = (path, cb) => rpc('historyGet', [path], cb)
 const mkdirCall = (path, cb) => rpc('mkdirp', [prependPath(path)], cb)
 const rmCall = (path1, cb) => rpc('rm', [prependPath(path1)], cb)
 const mvCall = (path1, path2, cb) => rpc('mv', [path1, path2], cb)
@@ -162,7 +149,7 @@ function shouldRefresh () {
   totalDone += 1
   if (totalUploads === totalDone) {
     window.onbeforeunload = null
-    console.log('Done uploading ' + totalDone + ' files')
+    console.log('done uploading ' + totalDone + ' files')
     totalDone = 0
     totalUploads = 0
     totalUploadsSize = 0
@@ -351,7 +338,6 @@ async function padOn (a) {
   editor.focus()
   window.onbeforeunload = warningMsg
   window.padTimer = setInterval(saveText, 5000)
-  currentActualPath = decodeURIComponent(location.pathname)
   pushSoftState(fileEdited)
 }
 
@@ -359,7 +345,6 @@ window.displayPad = padOn
 
 // quit pictures or editor
 function resetView () {
-  currentActualPath = ''
   softStatePushed = false
   table.style.display = 'table'
   picsHolder.src = transparentPixel
@@ -404,26 +389,6 @@ window.rename = (e, commit) => {
   }
 }
 
-// Keyboard Arrow
-let storeArrowToken
-
-function setPathServer () {
-  if (!storeArrowToken) return
-  clearTimeout(storeArrowToken)
-  storeArrowToken = 0
-  const path = currentActualPath.length > 0 ? currentActualPath : decodeURIComponent(location.pathname)
-  historyCallSet([path, getASelected().innerText, 'hash'])
-}
-
-function storeLastArrowPos (flush) {
-  if (flush && storeArrowToken) {
-    setPathServer()
-  } else {
-    clearTimeout(storeArrowToken)
-    storeArrowToken = setTimeout(setPathServer, 1000)
-  }
-}
-
 function aboveBelowRightin (el) {
   const itemPos = el.getBoundingClientRect()
   return itemPos.top < 0 ? -1 : itemPos.bottom > window.innerHeight ? 1 : 0
@@ -451,6 +416,7 @@ function clearArrowSelected () {
 
 window.setCursorTo = setCursorTo
 function setCursorTo (where) {
+  if (!where) return false
   clearArrowSelected()
   let a = allA.find(el => el.innerText === where || el.innerText === where + '/')
 
@@ -465,7 +431,8 @@ function setCursorTo (where) {
   const icon = a.parentElement.parentElement.querySelectorAll('.arrow-icon')[0]
   icon.classList.add('arrow-selected')
   scrollToArrow()
-  storeLastArrowPos()
+  storeArrow(where)
+  return true
 }
 
 function moveArrow (down) {
@@ -481,9 +448,11 @@ function moveArrow (down) {
   }
 
   all[i].classList.add('arrow-selected')
-  storeLastArrowPos()
+  storeArrow(getASelected().innerText)
   scrollToArrow()
 }
+
+const storeArrow = src => localStorage.setItem('last-selected' + extraPath+location.pathname, src)
 
 const isTop = () => window.scrollY === 0
 const isBottom = () => (window.innerHeight + window.scrollY) >= document.body.offsetHeight
@@ -523,18 +492,16 @@ const picTypes = ['.jpg', '.jpeg', '.png', '.gif']
 const isPic = src => src && picTypes.find(type => src.toLocaleLowerCase().includes(type))
 const isPicMode = () => pics.style.display === 'flex'
 window.picsNav = () => picsNav(true)
-let currentActualPath = ''
 
 function setImage () {
   const src = allImgs[imgsIndex]
   picsHolder.src = src
   const name = src.split('/').pop()
-  setCursorTo(name)
+  setCursorTo(decodeURI(name))
   history.replaceState({}, '', encodeURI(name))
 }
 
 function picsOn (href) {
-  currentActualPath = decodeURIComponent(location.pathname)
   imgsIndex = allImgs.findIndex(el => el.includes(href))
   setImage()
   table.style.display = 'none'
@@ -575,24 +542,16 @@ const videoFf = future => { videoHolder.currentTime += future ? 10 : -10 }
 const videoSound = up => { videoHolder.volume += up ? 0.1 : -0.1 }
 videoHolder.oncanplay = () => videoHolder.play()
 
-function setVideoTimeServer () {
-  if (!isVideoMode()) { return }
-  const time = parseInt(videoHolder.currentTime) + ''
-  historyCallSet([videoHolder.src, time, 'skipHash'])
-}
-
 async function videoOn (src) {
   const name = src.split('/').pop()
   setCursorTo(decodeURI(name))
-  currentActualPath = decodeURIComponent(location.pathname)
   table.style.display = 'none'
   crossIcon.style.display = 'block'
   video.style.display = 'flex'
   videoHolder.pause()
 
-  historyCallGet(src, e => {
-    if (e.target) videoHolder.currentTime = parseInt(e.target.responseText) || 0
-  })
+  const time = localStorage.getItem('video-time' + src)
+  videoHolder.currentTime = parseInt(time) || 0
 
   videoHolder.src = src
   pushSoftState(decodeURI(name))
@@ -601,7 +560,7 @@ async function videoOn (src) {
 
 function videosOff () {
   if (!isVideoMode()) { return }
-  setVideoTimeServer()
+  localStorage.setItem('video-time' + videoHolder.src, videoHolder.currentTime)
   resetView()
   softPrev()
   return true
@@ -772,13 +731,15 @@ function init () {
   allImgs = allA.map(el => el.href).filter(isPic)
   imgsIndex = softStatePushed = 0
 
-  if (!getArrowSelected()) {
-    table.querySelectorAll('.arrow-icon')[1].classList.add('arrow-selected')
+  const successRestore = setCursorTo(localStorage.getItem('last-selected' + extraPath + location.pathname))
+  if (!successRestore) {
+    const entries = table.querySelectorAll('.arrow-icon')
+    entries.length == 1 ? entries[0].classList.add('arrow-selected') : entries[1].classList.add('arrow-selected')
   }
 
   setTitle()
   scrollToArrow()
-  console.log('Browsed to ' + location.href)
+  console.log('browsed to ' + location.href)
 
   if (cuts.length) {
     const match = allA.filter(a => cuts.find(c => c === decode(a.href)))
