@@ -12,8 +12,6 @@ const ensureMove = () => !confirm('move items?')
 
 const upBarName = document.getElementById('upBarName')
 const upBarPc = document.getElementById('upBarPc')
-const dlBarName = document.getElementById('dlBarName')
-const dlBarPc = document.getElementById('dlBarPc')
 const upGrid = document.getElementById('drop-grid')
 const pics = document.getElementById('pics')
 const picsHolder = document.getElementById('picsHolder')
@@ -46,17 +44,14 @@ const flicker = w => w.classList.remove('runFade') || void w.offsetWidth || w.cl
 // Manual upload
 manualUpload.addEventListener('change', () => Array.from(manualUpload.files).forEach(f => isDupe(f.name) || postFile(f, '/' + f.name)), false)
 
-async function getPage (href) {
-  const r = await fetch(href, { credentials: 'include' })
-  const t = await r.text()
-  return new DOMParser().parseFromString(t, 'text/html')
-}
-
 // Soft nav
 async function browseTo (href, flickerDone, skipHistory) {
   storeLastArrowPos(true)
   try {
-    const parsed = await getPage(href)
+    const r = await fetch(href, { credentials: 'include' })
+    const t = await r.text()
+    const parsed = new DOMParser().parseFromString(t, 'text/html')
+
     table.innerHTML = parsed.getElementById('linkTable').innerHTML
     const title = parsed.head.querySelector('title').innerText
     // check if is current path - if so skip following
@@ -648,62 +643,6 @@ function onCut () {
   cuts.push(prependPath(decode(a.href)))
 }
 
-let downloadToken = 0
-let downloading = []
-let downloadingTtl = 0
-let dlRate = 0
-
-function updateDlUi () {
-  dlBarName.innerText = 'download started, new download every ' + dlRate + ' seconds'
-  dlBarPc.style.display = dlBarName.style.display = 'block'
-  dlBarPc.style.width = Math.floor(100 * (downloadingTtl - downloading.length) / downloadingTtl) + '%'
-  dlBarPc.innerText = (downloadingTtl - downloading.length) + '/' + (downloadingTtl)
-}
-
-function dl(name, href, skipAppend) {
-  if (!name || !href) return
-  console.log('downloading', name)
-  dlHelper.setAttribute('download', name)
-  dlHelper.href = skipAppend ? href : href + '/' + name
-  dlHelper.click()
-}
-
-function dlNext (a) {
-  a = downloading.pop()
-  dl(a.n, a.h)
-
-  if (downloading.length == 0) {
-    // maybe do warning unload here
-    clearInterval(downloadToken)
-    downloadingTtl = dlRate = downloadToken = 0
-    dlBarPc.style.display = dlBarName.style.display = 'none'
-  } else {
-    updateDlUi()
-  }
-}
-
-async function multiDownload (t) {
-  const sel = getASelected()
-
-  if (!isFolder(sel)) {
-    return dl(sel.innerText, sel.href, true)
-  }
-
-  if (!dlRate) dlRate = prompt('delay between files (seconds)', 30)
-  if (!dlRate) return
-
-  const p = await getPage(sel.href)
-  const as = Array.from(p.getElementById('linkTable').querySelectorAll('a')).filter(a => !a.innerHTML.endsWith('../')).map(a => { return { n: a.innerText, h: sel.href } })
-  downloading = downloading.concat(as)
-  downloadingTtl += as.length
-
-  if (!downloadToken) {
-    dlNext()
-    downloadToken = setInterval(dlNext, dlRate * 1000)
-  }
-  updateDlUi()
-}
-
 // Kb handler
 let typedPath = ''
 let typedToken = null
@@ -806,9 +745,6 @@ document.body.addEventListener('keydown', e => {
 
       case 'KeyM':
         return prevent(e) || window.mkdirBtn()
-
-      case 'KeyD':
-        return prevent(e) || multiDownload()
 
       case 'KeyU':
         return prevent(e) || manualUpload.click()
