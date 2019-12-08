@@ -1,6 +1,7 @@
 @media(max-width: 800px) {
   html {
     font-size: 1em !important;
+    user-select: none;
   }
   tr {
     line-height: 2em !important;
@@ -22,12 +23,23 @@
   }
 }
 
+/* hello standards 👋🏻 */
+::-webkit-scrollbar {
+    background: #2d3436;
+}
+
+::-webkit-scrollbar-thumb {
+    background: gray;
+}
+
 html {
   color: #dfe6e9;
   background-color: #2d3436;
   font-size: 1.5em;
+  font-family: Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   scrollbar-color: gray #2d3436;
+  -webkit-tap-highlight-color: transparent;
 }
 
 a {
@@ -76,6 +88,7 @@ div, i {
   font-weight: bold;
   padding-left: .5em;
   filter: invert(100%) !important;
+  padding-bottom: 10px;
 }
 
 table {
@@ -119,7 +132,8 @@ h1 > span:hover {
 
 #icHolder {
   display: inline-block;
-  right: 20px;
+  right: 15px;
+  background-color: #2d3436;
   top: 34px;
   position: absolute;
 }
