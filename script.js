@@ -10,13 +10,15 @@ const warningMsg = () => 'Leaving will interrupt transfer?\n'
 const rmMsg = () => !confirm('Remove file?\n')
 const ensureMove = () => !confirm('move items?')
 
-const barName = document.getElementById('dlBarName')
-const barPc = document.getElementById('dlBarPc')
-const barDiv = document.getElementById('progress')
+const upBarName = document.getElementById('upBarName')
+const upBarPc = document.getElementById('upBarPc')
 const upGrid = document.getElementById('drop-grid')
 const pics = document.getElementById('pics')
 const picsHolder = document.getElementById('picsHolder')
+const video = document.getElementById('video')
+const videoHolder = document.getElementById('videoHolder')
 const manualUpload = document.getElementById('clickupload')
+const help = document.getElementById('help')
 const okBadge = document.getElementById('ok')
 const sadBadge = document.getElementById('sad')
 const pageTitle = document.head.querySelector('title')
@@ -24,7 +26,9 @@ const pageH1 = document.body.querySelector('h1')
 const editor = document.getElementById('text-editor')
 const crossIcon = document.getElementById('quitAll')
 const toast = document.getElementById('toast')
-const table = document.querySelector('table')
+const table = document.getElementById('linkTable')
+const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+const dlHelper = document.getElementById('dlHelper')
 
 // helpers
 let allA
@@ -41,44 +45,48 @@ const flicker = w => w.classList.remove('runFade') || void w.offsetWidth || w.cl
 manualUpload.addEventListener('change', () => Array.from(manualUpload.files).forEach(f => isDupe(f.name) || postFile(f, '/' + f.name)), false)
 
 // Soft nav
-function browseTo (href, flickerDone, skipHistory) {
-  fetch(href, { credentials: 'include' }).then(r => r.text().then(t => {
+async function browseTo (href, flickerDone, skipHistory) {
+  try {
+    const r = await fetch(href, { credentials: 'include' })
+    const t = await r.text()
     const parsed = new DOMParser().parseFromString(t, 'text/html')
-    table.innerHTML = parsed.querySelector('table').innerHTML
 
+    table.innerHTML = parsed.getElementById('linkTable').innerHTML
     const title = parsed.head.querySelector('title').innerText
     // check if is current path - if so skip following
     if (pageTitle.innerText !== title) {
       if (!skipHistory) {
         history.pushState({}, '', encodeURI(window.extraPath + title))
       }
-
       pageTitle.innerText = title
       pageH1.innerText = '.' + title
-    }
-
-    if (flickerDone) {
-      flicker(okBadge)
+      setTitle()
     }
 
     init()
-  })).catch(() => flicker(sadBadge))
+    if (flickerDone) flicker(okBadge)
+  } catch (error) {
+    flicker(sadBadge)
+  }
 }
 
 window.onClickLink = e => {
-  storeLastArrowSrc(e.target.href)
-
   // follow dirs
   if (isFolder(e.target)) {
+    storeArrow(e.target.innerText)
     browseTo(e.target.href)
     return false
   // enable notepad if relevant
   } else if (isTextFile(e.target.innerText) && !isEditorMode()) {
-    displayPad(e.target)
+    padOn(e.target)
     return false
   // toggle picture carousel
   } else if (isPic(e.target.href) && !isPicMode()) {
     picsOn(e.target.href)
+    return false
+  // toggle videos mode
+  } else if (isVideo(e.target.href) && !isVideoMode()) {
+    videoOn(e.target.href)
     return false
   }
 
@@ -95,7 +103,7 @@ function pushSoftState (d) {
 
 const refresh = () => browseTo(location.href, true)
 
-const softPrev = () => history.replaceState({}, '', decodeURI(location.href.split('/').slice(0, -1).join('/') + '/'))
+const softPrev = () => history.replaceState({}, '', location.href.split('/').slice(0, -1).join('/') + '/')
 
 const isAtExtraPath = url => location.origin + window.extraPath + '/../' === url
 const prevPage = (url, skipHistory) => window.quitAll() || isAtExtraPath(url) || browseTo(url, false, skipHistory)
@@ -103,7 +111,7 @@ const prevPage = (url, skipHistory) => window.quitAll() || isAtExtraPath(url) ||
 window.onpopstate = () => prevPage(location.href, true)
 
 // RPC
-function rpcPost (id, what, path, cbDone, cbErr, cbUpdate) {
+function upload (id, what, path, cbDone, cbErr, cbUpdate) {
   const xhr = new XMLHttpRequest()
   xhr.open('POST', location.origin + window.extraPath + '/post')
   xhr.setRequestHeader('gossa-path', path)
@@ -114,7 +122,7 @@ function rpcPost (id, what, path, cbDone, cbErr, cbUpdate) {
   xhr.send(what)
 }
 
-function rpcFs (call, args, cb) {
+function rpc (call, args, cb) {
   console.log('RPC', call, args)
   const xhr = new XMLHttpRequest()
   xhr.open('POST', location.origin + window.extraPath + '/rpc')
@@ -124,9 +132,9 @@ function rpcFs (call, args, cb) {
   xhr.onerror = () => flicker(sadBadge)
 }
 
-const mkdirCall = (path, cb) => rpcFs('mkdirp', [prependPath(path)], cb)
-const rmCall = (path1, cb) => rpcFs('rm', [prependPath(path1)], cb)
-const mvCall = (path1, path2, cb) => rpcFs('mv', [path1, path2], cb)
+const mkdirCall = (path, cb) => rpc('mkdirp', [prependPath(path)], cb)
+const rmCall = (path1, cb) => rpc('rm', [prependPath(path1)], cb)
+const mvCall = (path1, path2, cb) => rpc('mv', [path1, path2], cb)
 
 // File upload
 let totalDone = 0
@@ -141,12 +149,12 @@ function shouldRefresh () {
   totalDone += 1
   if (totalUploads === totalDone) {
     window.onbeforeunload = null
-    console.log('Done uploading ' + totalDone + ' files')
+    console.log('done uploading ' + totalDone + ' files')
     totalDone = 0
     totalUploads = 0
     totalUploadsSize = 0
     totalUploadedSize = []
-    barDiv.style.display = 'none'
+    upBarPc.style.display = upBarName.style.display = 'none'
     table.classList.remove('uploading-table')
     refresh()
   }
@@ -156,8 +164,8 @@ function updatePercent (ev) {
   totalUploadedSize[ev.target.id] = ev.loaded
   const ttlDone = totalUploadedSize.reduce((s, x) => s + x)
   const pc = Math.floor(100 * ttlDone / totalUploadsSize) + '%'
-  barPc.innerText = pc
-  barPc.style.width = pc
+  upBarPc.innerText = pc
+  upBarPc.style.width = pc
 }
 
 function postFile (file, path) {
@@ -165,14 +173,14 @@ function postFile (file, path) {
   window.onbeforeunload = warningMsg
 
   table.classList.add('uploading-table')
-  barDiv.style.display = 'block'
+  upBarPc.style.display = upBarName.style.display = 'block'
   totalUploads += 1
   totalUploadsSize += file.size
-  barName.innerText = totalUploads > 1 ? totalUploads + ' files' : file.name
+  upBarName.innerText = totalUploads > 1 ? totalUploads + ' files' : file.name
 
   const formData = new FormData()
   formData.append(file.name, file)
-  rpcPost(totalUploads, formData, encodeURIComponent(path), shouldRefresh, null, updatePercent)
+  upload(totalUploads, formData, encodeURIComponent(path), shouldRefresh, null, updatePercent)
 }
 
 const parseDomFolder = f => f.createReader().readEntries(e => e.forEach(i => parseDomItem(i)))
@@ -198,6 +206,14 @@ function pushEntry (entry) {
   }
 
   parseDomItem(entry, true)
+}
+
+window.titleClick = function (e) {
+  const p = Array.from(document.querySelector("h1").childNodes).map(k => k.innerText)
+  const i = p.findIndex(s => s === e.target.innerText)
+  const dst = p.slice(0, i + 1).join("").slice(1)
+  const target = location.origin + window.extraPath + encodeURI(dst)
+  browseTo(target, false)
 }
 
 // Move files and folders
@@ -274,7 +290,7 @@ let fileEdited
 function saveText (quitting) {
   const formData = new FormData()
   formData.append(fileEdited, editor.innerText)
-  rpcPost(0, formData, encodeURIComponent(decodeURI(location.pathname)), () => {
+  upload(0, formData, encodeURIComponent(decodeURI(location.pathname)), () => {
     toast.style.display = 'none'
     if (!quitting) return
     clearInterval(window.padTimer)
@@ -295,7 +311,7 @@ function padOff () {
   return true
 }
 
-async function displayPad (a) {
+async function padOn (a) {
   if (a) {
     try {
       fileEdited = a.innerHTML
@@ -311,12 +327,12 @@ async function displayPad (a) {
     fileEdited = prompt('new filename', '')
     if (!fileEdited) { return }
     fileEdited = isTextFile(fileEdited) ? fileEdited : fileEdited + '.txt'
+    if (isDupe(fileEdited)) { return }
     editor.innerText = ''
-    saveText()
-    storeLastArrowSrc(location.href + fileEdited)
   }
 
   console.log('editing file', fileEdited)
+  setCursorTo(fileEdited)
   editor.style.display = crossIcon.style.display = 'block'
   table.style.display = 'none'
   editor.focus()
@@ -325,15 +341,19 @@ async function displayPad (a) {
   pushSoftState(fileEdited)
 }
 
-window.displayPad = displayPad
+window.displayPad = padOn
 
 // quit pictures or editor
 function resetView () {
+  softStatePushed = false
   table.style.display = 'table'
-  editor.style.display = pics.style.display = crossIcon.style.display = 'none'
+  picsHolder.src = transparentPixel
+  videoHolder.src = ''
+  editor.style.display = pics.style.display = video.style.display = crossIcon.style.display = 'none'
+  scrollToArrow()
 }
 
-window.quitAll = () => picsOff() || padOff()
+window.quitAll = () => helpOff() || picsOff() || videosOff() || padOff()
 
 // Mkdir icon
 window.mkdirBtn = function () {
@@ -344,12 +364,16 @@ window.mkdirBtn = function () {
 }
 
 // Icon click handler
-const getBtnA = e => e.target.parentElement.parentElement.querySelector('a')
+const getBtnA = e => e.target.closest('tr').querySelector('a')
 
 window.rm = e => {
   clearTimeout(window.clickToken)
-  const path = e.key ? getASelected().href : getBtnA(e).pathname
-  rmMsg() || rmCall(decode(path), refresh)
+  const target = e.key ? getASelected() : getBtnA(e)
+  if (target.innerText === '../') return
+  if (rmMsg()) return
+
+  moveArrow()
+  rmCall(decode(target.href), refresh)
 }
 
 window.rename = (e, commit) => {
@@ -360,23 +384,26 @@ window.rename = (e, commit) => {
     return
   }
 
-  const orig = e.key ? getASelected().innerHTML : getBtnA(e).innerHTML
-  const chg = prompt('rename to', orig)
+  const target = e.key ? getASelected() : getBtnA(e)
+  if (target.innerText === '../') return
+  const chg = prompt('rename to', target.innerHTML)
   if (chg && !isDupe(chg)) {
-    mvCall(prependPath(orig), prependPath(chg), refresh)
+    mvCall(prependPath(target.innerHTML), prependPath(chg), refresh)
   }
 }
 
-// Keyboard Arrow
-const storeLastArrowSrc = src => localStorage.setItem('last-selected' + location.href, src)
+function aboveBelowRightin (el) {
+  const itemPos = el.getBoundingClientRect()
+  return itemPos.top < 0 ? -1 : itemPos.bottom > window.innerHeight ? 1 : 0
+}
 
 function scrollToArrow () {
   const el = getASelected()
   while (1) {
-    const itemPos = el.getBoundingClientRect()
-    if (itemPos.top < 0) {
+    const pos = aboveBelowRightin(el)
+    if (pos === -1) {
       scrollBy(0, -300)
-    } else if (itemPos.bottom > window.innerHeight) {
+    } else if (pos === 1) {
       scrollBy(0, 300)
     } else {
       break
@@ -390,10 +417,11 @@ function clearArrowSelected () {
   arr.classList.remove('arrow-selected')
 }
 
-function restoreCursorPos () {
+window.setCursorTo = setCursorTo
+function setCursorTo (where) {
+  if (!where) return false
   clearArrowSelected()
-  const hrefSelected = localStorage.getItem('last-selected' + location.href)
-  let a = allA.find(el => el.href === hrefSelected)
+  let a = allA.find(el => el.innerText === where || el.innerText === where + '/')
 
   if (!a) {
     if (allA[0].innerText === '../') {
@@ -406,6 +434,8 @@ function restoreCursorPos () {
   const icon = a.parentElement.parentElement.querySelectorAll('.arrow-icon')[0]
   icon.classList.add('arrow-selected')
   scrollToArrow()
+  storeArrow(where)
+  return true
 }
 
 function moveArrow (down) {
@@ -421,8 +451,43 @@ function moveArrow (down) {
   }
 
   all[i].classList.add('arrow-selected')
-  storeLastArrowSrc(getASelected().href)
+  storeArrow(getASelected().innerText)
   scrollToArrow()
+}
+
+const storeArrow = src => localStorage.setItem('last-selected' + extraPath+location.pathname, src)
+
+const isTop = () => window.scrollY === 0
+const isBottom = () => (window.innerHeight + window.scrollY) >= document.body.offsetHeight
+const hasScroll = () => table.clientHeight > window.innerHeight
+
+function movePage (up) {
+  const current = getASelected().href
+
+  if (!hasScroll()) return
+
+  if (!up) {
+    const i = allA.findIndex(e => aboveBelowRightin(e) === 1)
+    if (isTop() && current !== allA[i - 1].href) {
+      return setCursorTo(allA[i - 1].innerText)
+    } else if (isBottom() && current !== allA[allA.length - 1].href) {
+      return setCursorTo(allA[allA.length - 1].innerText)
+    }
+
+    if (!allA[i - 1]) return
+    setCursorTo(allA[i - 1].innerText)
+    scrollBy(0, window.innerHeight - 100)
+  } else {
+    const i = allA.findIndex(e => aboveBelowRightin(e) === 0)
+    if (isTop() && current !== allA[0].href) {
+      return setCursorTo(allA[0].innerText)
+    } else if (isBottom() && current !== allA[i].href) {
+      return setCursorTo(allA[i].innerText)
+    }
+
+    scrollBy(0, -(window.innerHeight - 100))
+    setCursorTo(allA[i].innerText)
+  }
 }
 
 // Pictures carousel
@@ -434,9 +499,9 @@ window.picsNav = () => picsNav(true)
 function setImage () {
   const src = allImgs[imgsIndex]
   picsHolder.src = src
-  storeLastArrowSrc(src)
-  restoreCursorPos()
-  history.replaceState({}, '', encodeURI(src.split('/').pop()))
+  const name = src.split('/').pop()
+  setCursorTo(decodeURI(name))
+  history.replaceState({}, '', encodeURI(name))
 }
 
 function picsOn (href) {
@@ -445,7 +510,9 @@ function picsOn (href) {
   table.style.display = 'none'
   crossIcon.style.display = 'block'
   pics.style.display = 'flex'
-  pushSoftState(href.split('/').pop())
+  const name = href.split('/').pop()
+  setCursorTo(decodeURI(name))
+  pushSoftState(name)
   return true
 }
 
@@ -466,6 +533,57 @@ function picsNav (down) {
   }
 
   setImage()
+  return true
+}
+
+// Video player
+const videosTypes = ['.mp4', '.webm', '.ogv', '.ogg', '.mp3', 'flac']
+const isVideo = src => src && videosTypes.find(type => src.toLocaleLowerCase().includes(type))
+const isVideoMode = () => video.style.display === 'flex'
+const videoFs = () => video.requestFullscreen()
+const videoFf = future => { videoHolder.currentTime += future ? 10 : -10 }
+const videoSound = up => { videoHolder.volume += up ? 0.1 : -0.1 }
+videoHolder.oncanplay = () => videoHolder.play()
+
+async function videoOn (src) {
+  const name = src.split('/').pop()
+  setCursorTo(decodeURI(name))
+  table.style.display = 'none'
+  crossIcon.style.display = 'block'
+  video.style.display = 'flex'
+  videoHolder.pause()
+
+  const time = localStorage.getItem('video-time' + src)
+  videoHolder.currentTime = parseInt(time) || 0
+
+  videoHolder.src = src
+  pushSoftState(decodeURI(name))
+  return true
+}
+
+function videosOff () {
+  if (!isVideoMode()) { return }
+  localStorage.setItem('video-time' + videoHolder.src, videoHolder.currentTime)
+  resetView()
+  softPrev()
+  return true
+}
+
+// help
+const isHelpMode = () => help.style.display === 'block'
+
+const helpToggle = () => isHelpMode() ? helpOff() : helpOn()
+
+function helpOn () {
+  help.style.display = 'block'
+  table.style.display = 'none'
+}
+
+window.helpOff = helpOff
+function helpOff () {
+  if (!isHelpMode()) return
+  help.style.display = 'none'
+  table.style.display = 'table'
   return true
 }
 
@@ -500,17 +618,12 @@ function cpPath () {
   document.body.removeChild(t)
 }
 
-function setCursorToClosestTyped () {
-  const a = allA.find(el => el.innerText.toLocaleLowerCase().startsWith(typedPath))
-  if (!a) { return }
-  storeLastArrowSrc(a.href)
-  restoreCursorPos()
-}
-
 document.body.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
-    return resetBackgroundLinks() || picsOff() || padOff()
+    return resetBackgroundLinks() || window.quitAll()
   }
+
+  if (isHelpMode()) { return prevent(e) || window.quitAll() }
 
   if (isEditorMode()) { return }
 
@@ -529,6 +642,22 @@ document.body.addEventListener('keydown', e => {
     return
   }
 
+  if (isVideoMode()) {
+    switch (e.code) {
+      case 'ArrowDown':
+      case 'ArrowUp':
+        return prevent(e) || videoSound(e.code === 'ArrowUp')
+
+      case 'ArrowLeft':
+      case 'ArrowRight':
+        return prevent(e) || videoFf(e.code === 'ArrowRight')
+
+      case 'KeyF':
+        return prevent(e) || videoFs()
+    }
+    return
+  }
+
   switch (e.code) {
     case 'Tab':
     case 'ArrowDown':
@@ -543,16 +672,29 @@ document.body.addEventListener('keydown', e => {
 
     case 'ArrowLeft':
       return prevent(e) || prevPage(location.href + '../')
+
+    case 'PageDown':
+    case 'PageUp':
+      return prevent(e) || movePage(e.key === 'PageUp')
+
+    case 'Space':
+      return prevent(e) || movePage(e.shiftKey)
   }
 
   // Ctrl keys
-  if (e.ctrlKey || e.metaKey) {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
     switch (e.code) {
       case 'KeyC':
         return prevent(e) || cpPath()
 
+      case 'KeyH':
+        return prevent(e) || helpToggle()
+
       case 'KeyX':
         return prevent(e) || onCut()
+
+      case 'KeyR':
+        return prevent(e) || refresh()
 
       case 'KeyV':
         return prevent(e) || ensureMove() || onPaste()
@@ -563,7 +705,7 @@ document.body.addEventListener('keydown', e => {
       case 'KeyE':
         return prevent(e) || window.rename(e)
 
-      case 'KeyD':
+      case 'KeyM':
         return prevent(e) || window.mkdirBtn()
 
       case 'KeyU':
@@ -576,17 +718,31 @@ document.body.addEventListener('keydown', e => {
     typedPath += e.code.replace('Key', '').toLocaleLowerCase()
     clearTimeout(typedToken)
     typedToken = setTimeout(() => { typedPath = '' }, 1000)
-    setCursorToClosestTyped()
+
+    const a = allA.find(el => el.innerText.toLocaleLowerCase().startsWith(typedPath)) || allA.find(el => el.innerText.toLocaleLowerCase().includes(typedPath))
+    if (!a) { return }
+    setCursorTo(a.innerText)
   }
 }, false)
+
+function setTitle () {
+  pageH1.innerHTML = '<span>' + pageH1.innerText.split('/').join('/</span><span>') + '</span>'
+}
 
 function init () {
   allA = Array.from(document.querySelectorAll('a.list-links'))
   allImgs = allA.map(el => el.href).filter(isPic)
-
   imgsIndex = softStatePushed = 0
-  restoreCursorPos()
-  console.log('Browsed to ' + location.href)
+
+  const successRestore = setCursorTo(localStorage.getItem('last-selected' + extraPath + location.pathname))
+  if (!successRestore) {
+    const entries = table.querySelectorAll('.arrow-icon')
+    entries.length == 1 ? entries[0].classList.add('arrow-selected') : entries[1].classList.add('arrow-selected')
+  }
+
+  setTitle()
+  scrollToArrow()
+  console.log('browsed to ' + location.href)
 
   if (cuts.length) {
     const match = allA.filter(a => cuts.find(c => c === decode(a.href)))
