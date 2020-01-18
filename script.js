@@ -71,9 +71,10 @@ async function browseTo (href, flickerDone, skipHistory) {
 }
 
 window.onClickLink = e => {
+  setCursorTo(e.target.innerText)
+
   // follow dirs
   if (isFolder(e.target)) {
-    storeArrow(e.target.innerText)
     browseTo(e.target.href)
     return false
   // enable notepad if relevant
