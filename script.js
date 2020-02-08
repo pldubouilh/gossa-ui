@@ -74,6 +74,11 @@ async function browseTo (href, flickerDone, skipHistory) {
 window.onClickLink = e => {
   setCursorTo(e.target.innerText)
 
+  if (e.ctrlKey) {
+    dl(e.target)
+    return false
+  }
+
   // follow dirs
   if (isFolder(e.target)) {
     browseTo(e.target.href)
@@ -610,6 +615,16 @@ function onCut () {
   cuts.push(prependPath(decode(a.href)))
 }
 
+function dl(a) {
+  a = a ? a : getASelected()
+  const orig = a.onclick
+  a.download = a.innerText
+  a.onclick = ''
+  a.click()
+  a.download = ''
+  a.onclick = orig
+}
+
 // Kb handler
 let typedPath = ''
 let typedToken = null
@@ -663,29 +678,6 @@ document.body.addEventListener('keydown', e => {
     return
   }
 
-  switch (e.code) {
-    case 'Tab':
-    case 'ArrowDown':
-      return prevent(e) || moveArrow(true)
-
-    case 'ArrowUp':
-      return prevent(e) || moveArrow(false)
-
-    case 'Enter':
-    case 'ArrowRight':
-      return prevent(e) || getASelected().click()
-
-    case 'ArrowLeft':
-      return prevent(e) || prevPage(location.href + '../')
-
-    case 'PageDown':
-    case 'PageUp':
-      return prevent(e) || movePage(e.key === 'PageUp')
-
-    case 'Space':
-      return prevent(e) || movePage(e.shiftKey)
-  }
-
   // Ctrl keys
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
     switch (e.code) {
@@ -715,10 +707,37 @@ document.body.addEventListener('keydown', e => {
 
       case 'KeyU':
         return prevent(e) || isRo() || manualUpload.click()
+
+      case 'Enter':
+      case 'ArrowRight':
+        return prevent(e) || dl()
     }
   }
 
-  // text search
+  switch (e.code) {
+    case 'Tab':
+    case 'ArrowDown':
+      return prevent(e) || moveArrow(true)
+
+    case 'ArrowUp':
+      return prevent(e) || moveArrow(false)
+
+    case 'Enter':
+    case 'ArrowRight':
+      return prevent(e) || getASelected().click()
+
+    case 'ArrowLeft':
+      return prevent(e) || prevPage(location.href + '../')
+
+    case 'PageDown':
+    case 'PageUp':
+      return prevent(e) || movePage(e.key === 'PageUp')
+
+    case 'Space':
+      return prevent(e) || movePage(e.shiftKey)
+  }
+
+   // text search
   if (e.code.includes('Key') && !e.ctrlKey && !e.metaKey) {
     typedPath += e.code.replace('Key', '').toLocaleLowerCase()
     clearTimeout(typedToken)
