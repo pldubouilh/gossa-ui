@@ -9,6 +9,7 @@ function cancelDefault (e) {
 const warningMsg = () => 'Leaving will interrupt transfer?\n'
 const rmMsg = () => !confirm('Remove file?\n')
 const ensureMove = () => !confirm('move items?')
+const isRo = () => window.ro
 
 const upBarName = document.getElementById('upBarName')
 const upBarPc = document.getElementById('upBarPc')
@@ -71,13 +72,19 @@ async function browseTo (href, flickerDone, skipHistory) {
 }
 
 window.onClickLink = e => {
+  setCursorTo(e.target.innerText)
+
+  if (e.ctrlKey) {
+    dl(e.target)
+    return false
+  }
+
   // follow dirs
   if (isFolder(e.target)) {
-    storeArrow(e.target.innerText)
     browseTo(e.target.href)
     return false
   // enable notepad if relevant
-  } else if (isTextFile(e.target.innerText) && !isEditorMode()) {
+  } else if (!window.ro && isTextFile(e.target.innerText) && !isEditorMode()) {
     padOn(e.target)
     return false
   // toggle picture carousel
@@ -169,6 +176,7 @@ function updatePercent (ev) {
 }
 
 function postFile (file, path) {
+  if (window.ro) return
   path = decodeURI(location.pathname).slice(0, -1) + path
   window.onbeforeunload = warningMsg
 
@@ -237,7 +245,7 @@ upGrid.ondragleave = e => {
 
 // Handle hover
 document.ondragenter = e => {
-  if (isEditorMode() || isPicMode()) { return }
+  if (isEditorMode() || isPicMode() || window.ro) { return }
   cancelDefault(e)
   resetBackgroundLinks()
 
@@ -263,6 +271,8 @@ document.ondragover = e => {
 
 // Handle drop
 document.ondrop = e => {
+  if (window.ro) return
+
   cancelDefault(e)
   upGrid.style.display = 'none'
   let t = getLink().firstChild
@@ -367,6 +377,7 @@ window.mkdirBtn = function () {
 const getBtnA = e => e.target.closest('tr').querySelector('a')
 
 window.rm = e => {
+  if (window.ro) return true
   clearTimeout(window.clickToken)
   const target = e.key ? getASelected() : getBtnA(e)
   if (target.innerText === '../') return
@@ -377,6 +388,7 @@ window.rm = e => {
 }
 
 window.rename = (e, commit) => {
+  if (window.ro) return true
   clearTimeout(window.clickToken)
 
   if (!commit) {
@@ -511,7 +523,6 @@ function picsOn (href) {
   crossIcon.style.display = 'block'
   pics.style.display = 'flex'
   const name = href.split('/').pop()
-  setCursorTo(decodeURI(name))
   pushSoftState(name)
   return true
 }
@@ -547,7 +558,6 @@ videoHolder.oncanplay = () => videoHolder.play()
 
 async function videoOn (src) {
   const name = src.split('/').pop()
-  setCursorTo(decodeURI(name))
   table.style.display = 'none'
   crossIcon.style.display = 'block'
   video.style.display = 'flex'
@@ -605,6 +615,16 @@ function onCut () {
   cuts.push(prependPath(decode(a.href)))
 }
 
+function dl(a) {
+  a = a ? a : getASelected()
+  const orig = a.onclick
+  a.download = a.innerText
+  a.onclick = ''
+  a.click()
+  a.download = ''
+  a.onclick = orig
+}
+
 // Kb handler
 let typedPath = ''
 let typedToken = null
@@ -658,6 +678,42 @@ document.body.addEventListener('keydown', e => {
     return
   }
 
+  // Ctrl keys
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+    switch (e.code) {
+      case 'KeyC':
+        return prevent(e) || isRo() || cpPath()
+
+      case 'KeyH':
+        return prevent(e) || isRo() || helpToggle()
+
+      case 'KeyX':
+        return prevent(e) || isRo() || onCut()
+
+      case 'KeyR':
+        return prevent(e) || refresh()
+
+      case 'KeyV':
+        return prevent(e) || isRo() || ensureMove() || onPaste()
+
+      case 'Backspace':
+        return prevent(e) || isRo() || window.rm(e)
+
+      case 'KeyE':
+        return prevent(e) || isRo() || window.rename(e)
+
+      case 'KeyM':
+        return prevent(e) || isRo() || window.mkdirBtn()
+
+      case 'KeyU':
+        return prevent(e) || isRo() || manualUpload.click()
+
+      case 'Enter':
+      case 'ArrowRight':
+        return prevent(e) || dl()
+    }
+  }
+
   switch (e.code) {
     case 'Tab':
     case 'ArrowDown':
@@ -681,39 +737,7 @@ document.body.addEventListener('keydown', e => {
       return prevent(e) || movePage(e.shiftKey)
   }
 
-  // Ctrl keys
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-    switch (e.code) {
-      case 'KeyC':
-        return prevent(e) || cpPath()
-
-      case 'KeyH':
-        return prevent(e) || helpToggle()
-
-      case 'KeyX':
-        return prevent(e) || onCut()
-
-      case 'KeyR':
-        return prevent(e) || refresh()
-
-      case 'KeyV':
-        return prevent(e) || ensureMove() || onPaste()
-
-      case 'Backspace':
-        return prevent(e) || window.rm(e)
-
-      case 'KeyE':
-        return prevent(e) || window.rename(e)
-
-      case 'KeyM':
-        return prevent(e) || window.mkdirBtn()
-
-      case 'KeyU':
-        return prevent(e) || manualUpload.click()
-    }
-  }
-
-  // text search
+   // text search
   if (e.code.includes('Key') && !e.ctrlKey && !e.metaKey) {
     typedPath += e.code.replace('Key', '').toLocaleLowerCase()
     clearTimeout(typedToken)

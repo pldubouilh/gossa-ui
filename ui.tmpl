@@ -11,6 +11,7 @@
     <link href="data:image/png;base64,favicon_will_be_here" rel="icon" type="image/png" />
     <style type="text/css">css_will_be_here</style>
     <script>
+        window.ro = {{.Ro}}
         window.extraPath = {{.ExtraPath}}.slice(0, -1)
         window.onload = function () { js_will_be_here }
     </script>
@@ -26,6 +27,7 @@
         <tr><td>Ctrl/Meta + M</td><td>create a new directory</td></tr>
         <tr><td>Ctrl/Meta + X</td><td>cut selected path</td></tr>
         <tr><td>Ctrl/Meta + V</td><td>paste previously selected paths to directory</td></tr>
+        <tr><td>Ctrl/Meta + Enter</td><td>download selected file</td></tr>
         <tr><td>click new folder icon</td><td>create new folder</td></tr>
         <tr><td>click pad icon</td><td>open file editor</td></tr>
         <tr><td>click file icon </td><td>rename item</td></tr>
@@ -44,9 +46,11 @@
     <h1 onclick="return titleClick(event)">.{{.Title}}</h1>
 
     <div id="icHolder">
-        <div style="display:none;" onclick="document.getElementById('clickupload').click()" class="ic icon-large-upload manualUp"></div>
-        <div onclick="window.displayPad()" class="ic icon-large-pad"></div>
-        <div class="ic icon-large-folder" onclick="window.mkdirBtn()"></div>
+        {{if not .Ro}}
+            <div style="display:none;" onclick="document.getElementById('clickupload').click()" class="ic icon-large-upload manualUp"></div>
+            <div onclick="window.displayPad()" class="ic icon-large-pad"></div>
+            <div class="ic icon-large-folder" onclick="window.mkdirBtn()"></div>
+        {{end}}
     </div>
 
     <div id="pics" style="display:none;"> <img onclick="window.picsNav()" id="picsHolder" /></div>
