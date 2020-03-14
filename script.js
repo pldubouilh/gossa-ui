@@ -398,9 +398,9 @@ window.rename = (e, commit) => {
 
   const target = e.key ? getASelected() : getBtnA(e)
   if (target.innerText === '../') return
-  const chg = prompt('rename to', target.innerHTML)
+  const chg = prompt('rename to', target.innerText)
   if (chg && !isDupe(chg)) {
-    mvCall(prependPath(target.innerHTML), prependPath(chg), refresh)
+    mvCall(prependPath(target.innerText), prependPath(chg), refresh)
   }
 }
 
