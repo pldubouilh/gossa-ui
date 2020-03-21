@@ -163,7 +163,7 @@ function shouldRefresh () {
     totalUploadedSize = []
     upBarPc.style.display = upBarName.style.display = 'none'
     table.classList.remove('uploading-table')
-    refresh()
+    setTimeout(refresh, 200)
   }
 }
 
