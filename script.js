@@ -547,6 +547,20 @@ function picsNav (down) {
   return true
 }
 
+let picsTouchStart = 0;
+
+picsHolder.addEventListener('touchstart', e => {
+  picsTouchStart = e.changedTouches[0].screenX
+}, false)
+
+picsHolder.addEventListener('touchend', e => {
+  if (e.changedTouches[0].screenX < picsTouchStart) {
+    picsNav(true)
+  } else if (e.changedTouches[0].screenX > picsTouchStart) {
+    picsNav(false)
+  }
+}, false)
+
 // Video player
 const videosTypes = ['.mp4', '.webm', '.ogv', '.ogg', '.mp3', 'flac']
 const isVideo = src => src && videosTypes.find(type => src.toLocaleLowerCase().includes(type))

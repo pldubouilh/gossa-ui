@@ -264,6 +264,7 @@ h1 > span:hover {
 }
 
 #picsHolder {
+  user-select: none;
   height: 100%;
   width: 100%;
   cursor: pointer;
