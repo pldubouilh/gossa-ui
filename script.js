@@ -293,7 +293,7 @@ document.ondrop = e => {
 
 // Notepad
 const isEditorMode = () => editor.style.display === 'block'
-const textTypes = ['.txt', '.rtf', '.md', '.log']
+const textTypes = ['.txt', '.rtf', '.md', '.markdown', '.log', '.yaml', 'yml']
 const isTextFile = src => src && textTypes.find(type => src.toLocaleLowerCase().includes(type))
 let fileEdited
 
