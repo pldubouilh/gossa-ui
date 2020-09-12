@@ -632,10 +632,20 @@ function onCut () {
 function dl(a) {
   a = a ? a : getASelected()
   const orig = a.onclick
-  a.download = a.innerText
   a.onclick = ''
-  a.click()
-  a.download = ''
+
+  // download as zip if folder
+  if (isFolder(a)) {
+    const loc = a.href
+    a.href = window.extraPath + '/zip?zipPath=' + encodeURIComponent(prependPath(a.innerText)) + '&zipName=' + encodeURIComponent(a.innerText.slice(0, -1))
+    a.click()
+    a.href = loc
+  } else {
+    a.download = a.innerText
+    a.click()
+    a.download = ''
+  }
+
   a.onclick = orig
 }
 
