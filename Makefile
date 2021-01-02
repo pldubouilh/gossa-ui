@@ -1,8 +1,4 @@
 embed:
-ifdef branch
-	echo "~~~ will checkout ui branch" $(branch)
-	git checkout $(branch)
-endif
 	ls ../gossa.go
 	echo "embedding css and js into binary"
 	perl -pe 's/template_will_be_here/`cat ui.tmpl`/ge' -i ../gossa.go
