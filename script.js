@@ -71,33 +71,39 @@ async function browseTo (href, flickerDone, skipHistory) {
 }
 
 window.onClickLink = e => {
-  setCursorTo(e.target.innerText)
+  const a = e ? e.target : getASelected()
 
-  if (e.ctrlKey) {
-    dl(e.target)
+  if (e) {
+    setCursorTo(e.target.innerText)
+  }
+
+  // always force download if ctrl pressed (also covers zipping folders)
+  if (e && e.ctrlKey) {
+    dl(a)
     return false
   }
 
   // follow dirs
-  if (isFolder(e.target)) {
-    browseTo(e.target.href)
+  if (isFolder(a)) {
+    browseTo(a.href)
     return false
   // enable notepad if relevant
-  } else if (!window.ro && isTextFile(e.target.innerText) && !isEditorMode()) {
-    padOn(e.target)
+  } else if (!window.ro && isTextFile(a.innerText) && !isEditorMode()) {
+    padOn(a)
     return false
   // toggle picture carousel
-  } else if (isPic(e.target.href) && !isPicMode()) {
-    picsOn(e.target.href)
+  } else if (isPic(a.href) && !isPicMode()) {
+    picsOn(a.href)
     return false
   // toggle videos mode
-  } else if (isVideo(e.target.href) && !isVideoMode()) {
-    videoOn(e.target.href)
+  } else if (isVideo(a.href) && !isVideoMode()) {
+    videoOn(a.href)
     return false
   }
 
-  // else just click link
-  return true
+  // else just force download
+  dl(a)
+  return false
 }
 
 let softStatePushed
@@ -629,7 +635,6 @@ function onCut () {
 }
 
 function dl (a) {
-  a = a || getASelected()
   const orig = a.onclick
   a.onclick = ''
 
@@ -733,7 +738,7 @@ document.body.addEventListener('keydown', e => {
 
       case 'Enter':
       case 'ArrowRight':
-        return prevent(e) || dl()
+        return prevent(e) || dl(getASelected())
     }
   }
 
@@ -747,7 +752,7 @@ document.body.addEventListener('keydown', e => {
 
     case 'Enter':
     case 'ArrowRight':
-      return prevent(e) || getASelected().click()
+      return prevent(e) || window.onClickLink()
 
     case 'ArrowLeft':
       return prevent(e) || prevPage(location.href + '../')
