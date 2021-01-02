@@ -304,7 +304,7 @@ let fileEdited
 
 function saveText (quitting) {
   const formData = new FormData()
-  formData.append(fileEdited, editor.innerText)
+  formData.append(fileEdited, editor.value)
   upload(0, formData, encodeURIComponent(decodeURI(location.pathname)), () => {
     toast.style.display = 'none'
     if (!quitting) return
@@ -334,7 +334,7 @@ async function padOn (a) {
         credentials: 'include',
         headers: new Headers({ 'pragma': 'no-cache', 'cache-control': 'no-cache' })
       })
-      editor.innerText = await f.text()
+      editor.value = await f.text()
     } catch (error) {
       return alert('cant read file')
     }
@@ -343,7 +343,7 @@ async function padOn (a) {
     if (!fileEdited) { return }
     fileEdited = isTextFile(fileEdited) ? fileEdited : fileEdited + '.txt'
     if (isDupe(fileEdited)) { return }
-    editor.innerText = ''
+    editor.value = ''
   }
 
   console.log('editing file', fileEdited)
