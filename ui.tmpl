@@ -2,11 +2,13 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="theme-color" content="#2d3436">
-    <meta name="msapplication-navbutton-color" content="#2d3436">
+    <meta name="theme-color" content="rgb(45,52,54)">
+    <meta name="msapplication-navbutton-color" content="rgb(45,52,54)">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="viewport" content="width=device-width">
+
+    <link rel="manifest" href='data:application/manifest+json,{"name":"{{.Title}}","short_name":"{{.Title}}","description":"  ","icons":[{"src":"data:image/png;base64,favicon_will_be_here","sizes":"144x144","type":"image/png"}],"background":"rgb(45,52,54)","theme_color":"rgb(45,52,54)","display":"standalone"}' />
+
     <title>{{.Title}}</title>
     <link href="data:image/png;base64,favicon_will_be_here" rel="icon" type="image/png" />
     <style type="text/css">css_will_be_here</style>
