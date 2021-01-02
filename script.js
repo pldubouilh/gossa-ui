@@ -29,7 +29,6 @@ const crossIcon = document.getElementById('quitAll')
 const toast = document.getElementById('toast')
 const table = document.getElementById('linkTable')
 const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
-const dlHelper = document.getElementById('dlHelper')
 
 // helpers
 let allA
@@ -217,9 +216,9 @@ function pushEntry (entry) {
 }
 
 window.titleClick = function (e) {
-  const p = Array.from(document.querySelector("h1").childNodes).map(k => k.innerText)
+  const p = Array.from(document.querySelector('h1').childNodes).map(k => k.innerText)
   const i = p.findIndex(s => s === e.target.innerText)
-  const dst = p.slice(0, i + 1).join("").slice(1)
+  const dst = p.slice(0, i + 1).join('').slice(1)
   const target = location.origin + window.extraPath + encodeURI(dst)
   browseTo(target, false)
 }
@@ -467,7 +466,7 @@ function moveArrow (down) {
   scrollToArrow()
 }
 
-const storeArrow = src => localStorage.setItem('last-selected' + extraPath+location.pathname, src)
+const storeArrow = src => localStorage.setItem('last-selected' + window.extraPath + location.pathname, src)
 
 const isTop = () => window.scrollY === 0
 const isBottom = () => (window.innerHeight + window.scrollY) >= document.body.offsetHeight
@@ -547,7 +546,7 @@ function picsNav (down) {
   return true
 }
 
-let picsTouchStart = 0;
+let picsTouchStart = 0
 
 picsHolder.addEventListener('touchstart', e => {
   picsTouchStart = e.changedTouches[0].screenX
@@ -629,8 +628,8 @@ function onCut () {
   cuts.push(prependPath(decode(a.href)))
 }
 
-function dl(a) {
-  a = a ? a : getASelected()
+function dl (a) {
+  a = a || getASelected()
   const orig = a.onclick
   a.onclick = ''
 
@@ -761,7 +760,7 @@ document.body.addEventListener('keydown', e => {
       return prevent(e) || movePage(e.shiftKey)
   }
 
-   // text search
+  // text search
   if (e.code.includes('Key') && !e.ctrlKey && !e.metaKey) {
     typedPath += e.code.replace('Key', '').toLocaleLowerCase()
     clearTimeout(typedToken)
@@ -782,10 +781,10 @@ function init () {
   allImgs = allA.map(el => el.href).filter(isPic)
   imgsIndex = softStatePushed = 0
 
-  const successRestore = setCursorTo(localStorage.getItem('last-selected' + extraPath + location.pathname))
+  const successRestore = setCursorTo(localStorage.getItem('last-selected' + window.extraPath + location.pathname))
   if (!successRestore) {
     const entries = table.querySelectorAll('.arrow-icon')
-    entries.length == 1 ? entries[0].classList.add('arrow-selected') : entries[1].classList.add('arrow-selected')
+    entries.length === 1 ? entries[0].classList.add('arrow-selected') : entries[1].classList.add('arrow-selected')
   }
 
   setTitle()
