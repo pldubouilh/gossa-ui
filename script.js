@@ -237,7 +237,7 @@ const getClosestRow = t => t.nodeName === '#text' ? t.parentElement.parentElemen
 
 let draggingSrc
 
-upGrid.ondragleave = e => {
+upGrid.ondragend = upGrid.ondragexit = upGrid.ondragleave = e => {
   cancelDefault(e)
   upGrid.style.display = 'none'
 }
