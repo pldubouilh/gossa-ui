@@ -305,7 +305,8 @@ let fileEdited
 function saveText (quitting) {
   const formData = new FormData()
   formData.append(fileEdited, editor.value)
-  upload(0, formData, encodeURIComponent(decodeURI(location.pathname)), () => {
+  const path = encodeURIComponent(decodeURI(location.pathname) + fileEdited)
+  upload(0, formData, path, () => {
     toast.style.display = 'none'
     if (!quitting) return
     clearInterval(window.padTimer)
@@ -353,7 +354,7 @@ async function padOn (a) {
   editor.focus()
   window.onbeforeunload = warningMsg
   window.padTimer = setInterval(saveText, 5000)
-  pushSoftState(fileEdited)
+  pushSoftState('?editor=' + fileEdited)
 }
 
 window.displayPad = padOn
@@ -799,6 +800,13 @@ function init () {
   if (cuts.length) {
     const match = allA.filter(a => cuts.find(c => c === decode(a.href)))
     match.forEach(m => m.classList.add('linkSelected'))
+  }
+
+  // restore editor if was queried
+  if (location.search.includes('?editor=')) {
+    const cleanURL = location.href.replace('?editor=', '')
+    const matchingA = allA.find(a => a.href === cleanURL)
+    padOn(matchingA)
   }
 }
 init()
