@@ -244,9 +244,13 @@ h1 > span:hover {
   outline: none;
   width: -moz-available;
   width: -webkit-fill-available;
-  border-bottom: 20px #2d3436 solid;
+  height: 100%;
+  color: white;
+  font-size: 1em;
+  border: none;
+  resize: none;
+  box-sizing: border-box;
 }
-
 
 #pics {
   user-select: none;

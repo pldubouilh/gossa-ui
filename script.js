@@ -29,7 +29,6 @@ const crossIcon = document.getElementById('quitAll')
 const toast = document.getElementById('toast')
 const table = document.getElementById('linkTable')
 const transparentPixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
-const dlHelper = document.getElementById('dlHelper')
 
 // helpers
 let allA
@@ -72,33 +71,39 @@ async function browseTo (href, flickerDone, skipHistory) {
 }
 
 window.onClickLink = e => {
-  setCursorTo(e.target.innerText)
+  const a = e ? e.target : getASelected()
 
-  if (e.ctrlKey) {
-    dl(e.target)
+  if (e) {
+    setCursorTo(e.target.innerText)
+  }
+
+  // always force download if ctrl pressed (also covers zipping folders)
+  if (e && e.ctrlKey) {
+    dl(a)
     return false
   }
 
   // follow dirs
-  if (isFolder(e.target)) {
-    browseTo(e.target.href)
+  if (isFolder(a)) {
+    browseTo(a.href)
     return false
   // enable notepad if relevant
-  } else if (!window.ro && isTextFile(e.target.innerText) && !isEditorMode()) {
-    padOn(e.target)
+  } else if (!window.ro && isTextFile(a.innerText) && !isEditorMode()) {
+    padOn(a)
     return false
   // toggle picture carousel
-  } else if (isPic(e.target.href) && !isPicMode()) {
-    picsOn(e.target.href)
+  } else if (isPic(a.href) && !isPicMode()) {
+    picsOn(a.href)
     return false
   // toggle videos mode
-  } else if (isVideo(e.target.href) && !isVideoMode()) {
-    videoOn(e.target.href)
+  } else if (isVideo(a.href) && !isVideoMode()) {
+    videoOn(a.href)
     return false
   }
 
-  // else just click link
-  return true
+  // else just force download
+  dl(a)
+  return false
 }
 
 let softStatePushed
@@ -217,9 +222,9 @@ function pushEntry (entry) {
 }
 
 window.titleClick = function (e) {
-  const p = Array.from(document.querySelector("h1").childNodes).map(k => k.innerText)
+  const p = Array.from(document.querySelector('h1').childNodes).map(k => k.innerText)
   const i = p.findIndex(s => s === e.target.innerText)
-  const dst = p.slice(0, i + 1).join("").slice(1)
+  const dst = p.slice(0, i + 1).join('').slice(1)
   const target = location.origin + window.extraPath + encodeURI(dst)
   browseTo(target, false)
 }
@@ -238,7 +243,7 @@ const getClosestRow = t => t.nodeName === '#text' ? t.parentElement.parentElemen
 
 let draggingSrc
 
-upGrid.ondragleave = e => {
+upGrid.ondragend = upGrid.ondragexit = upGrid.ondragleave = e => {
   cancelDefault(e)
   upGrid.style.display = 'none'
 }
@@ -299,8 +304,9 @@ let fileEdited
 
 function saveText (quitting) {
   const formData = new FormData()
-  formData.append(fileEdited, editor.innerText)
-  upload(0, formData, encodeURIComponent(decodeURI(location.pathname)), () => {
+  formData.append(fileEdited, editor.value)
+  const path = encodeURIComponent(decodeURI(location.pathname) + fileEdited)
+  upload(0, formData, path, () => {
     toast.style.display = 'none'
     if (!quitting) return
     clearInterval(window.padTimer)
@@ -329,7 +335,7 @@ async function padOn (a) {
         credentials: 'include',
         headers: new Headers({ 'pragma': 'no-cache', 'cache-control': 'no-cache' })
       })
-      editor.innerText = await f.text()
+      editor.value = await f.text()
     } catch (error) {
       return alert('cant read file')
     }
@@ -338,7 +344,7 @@ async function padOn (a) {
     if (!fileEdited) { return }
     fileEdited = isTextFile(fileEdited) ? fileEdited : fileEdited + '.txt'
     if (isDupe(fileEdited)) { return }
-    editor.innerText = ''
+    editor.value = ''
   }
 
   console.log('editing file', fileEdited)
@@ -348,7 +354,7 @@ async function padOn (a) {
   editor.focus()
   window.onbeforeunload = warningMsg
   window.padTimer = setInterval(saveText, 5000)
-  pushSoftState(fileEdited)
+  pushSoftState('?editor=' + fileEdited)
 }
 
 window.displayPad = padOn
@@ -467,7 +473,7 @@ function moveArrow (down) {
   scrollToArrow()
 }
 
-const storeArrow = src => localStorage.setItem('last-selected' + extraPath+location.pathname, src)
+const storeArrow = src => localStorage.setItem('last-selected' + window.extraPath + location.pathname, src)
 
 const isTop = () => window.scrollY === 0
 const isBottom = () => (window.innerHeight + window.scrollY) >= document.body.offsetHeight
@@ -547,7 +553,7 @@ function picsNav (down) {
   return true
 }
 
-let picsTouchStart = 0;
+let picsTouchStart = 0
 
 picsHolder.addEventListener('touchstart', e => {
   picsTouchStart = e.changedTouches[0].screenX
@@ -629,8 +635,7 @@ function onCut () {
   cuts.push(prependPath(decode(a.href)))
 }
 
-function dl(a) {
-  a = a ? a : getASelected()
+function dl (a) {
   const orig = a.onclick
   a.onclick = ''
 
@@ -734,7 +739,7 @@ document.body.addEventListener('keydown', e => {
 
       case 'Enter':
       case 'ArrowRight':
-        return prevent(e) || dl()
+        return prevent(e) || dl(getASelected())
     }
   }
 
@@ -748,7 +753,7 @@ document.body.addEventListener('keydown', e => {
 
     case 'Enter':
     case 'ArrowRight':
-      return prevent(e) || getASelected().click()
+      return prevent(e) || window.onClickLink()
 
     case 'ArrowLeft':
       return prevent(e) || prevPage(location.href + '../')
@@ -761,7 +766,7 @@ document.body.addEventListener('keydown', e => {
       return prevent(e) || movePage(e.shiftKey)
   }
 
-   // text search
+  // text search
   if (e.code.includes('Key') && !e.ctrlKey && !e.metaKey) {
     typedPath += e.code.replace('Key', '').toLocaleLowerCase()
     clearTimeout(typedToken)
@@ -782,10 +787,10 @@ function init () {
   allImgs = allA.map(el => el.href).filter(isPic)
   imgsIndex = softStatePushed = 0
 
-  const successRestore = setCursorTo(localStorage.getItem('last-selected' + extraPath + location.pathname))
+  const successRestore = setCursorTo(localStorage.getItem('last-selected' + window.extraPath + location.pathname))
   if (!successRestore) {
     const entries = table.querySelectorAll('.arrow-icon')
-    entries.length == 1 ? entries[0].classList.add('arrow-selected') : entries[1].classList.add('arrow-selected')
+    entries.length === 1 ? entries[0].classList.add('arrow-selected') : entries[1].classList.add('arrow-selected')
   }
 
   setTitle()
@@ -795,6 +800,13 @@ function init () {
   if (cuts.length) {
     const match = allA.filter(a => cuts.find(c => c === decode(a.href)))
     match.forEach(m => m.classList.add('linkSelected'))
+  }
+
+  // restore editor if was queried
+  if (location.search.includes('?editor=')) {
+    const cleanURL = location.href.replace('?editor=', '')
+    const matchingA = allA.find(a => a.href === cleanURL)
+    padOn(matchingA)
   }
 }
 init()

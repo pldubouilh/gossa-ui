@@ -2,13 +2,15 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="theme-color" content="#2d3436">
-    <meta name="msapplication-navbutton-color" content="#2d3436">
+    <meta name="theme-color" content="rgb(45,52,54)">
+    <meta name="msapplication-navbutton-color" content="rgb(45,52,54)">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="viewport" content="width=device-width">
+
+    <link rel="manifest" href='data:application/manifest+json,{"name":"{{.Title}}","short_name":"{{.Title}}","description":"  ","icons":[{"src":"data:image/svg+xml;base64,favicon_will_be_here","sizes":"150x150","type":"image/svg+xml"}],"background":"rgb(45,52,54)","theme_color":"rgb(45,52,54)","display":"standalone"}' />
+
     <title>{{.Title}}</title>
-    <link href="data:image/png;base64,favicon_will_be_here" rel="icon" type="image/png" />
+    <link href="data:image/svg+xml;base64,favicon_will_be_here" rel="icon" type="image/svg+xml" />
     <style type="text/css">css_will_be_here</style>
     <script>
         window.ro = {{.Ro}}
@@ -36,9 +38,8 @@
         <tr><td>any other letter</td><td>fuzzy search</td></tr>
     </tbody></table></div>
 
-    <a id="dlHelper" style="display: none;"></a>
     <div style="display: none;" onclick="window.quitAll()" id="quitAll"><i style="display: none;" id="toast">cant reach server</i></div>
-    <div style="display: none;" contenteditable="true" id="text-editor"></div>
+    <textarea style="display: none;" id="text-editor"></textarea>
     <div id="drop-grid"></div>
     <input type="file" id="clickupload" style="display:none"/>
 
