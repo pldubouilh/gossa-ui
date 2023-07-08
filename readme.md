@@ -1,4 +1,3 @@
-gossa-ui
-========
++++++ ARCHIVED +++++
 
-a ~~ugly~~ simple, dependency-free, plain js/css/html front-end for [gossa](https://github.com/pldubouilh/gossa)
+ui of [gossa](https://github.com/pldubouilh/gossa) - now lives in the repo
